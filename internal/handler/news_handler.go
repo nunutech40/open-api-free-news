@@ -19,10 +19,11 @@ func NewNewsHandler(newsSvc domain.NewsService) *NewsHandler {
 
 // GetCategories godoc
 // @Summary      List active categories
-// @Description  Returns all active news categories
+// @Description  Returns all active news categories available as filter chips in the feed UI
 // @Tags         news
 // @Produce      json
-// @Success      200 {object} util.Response{data=[]domain.Category}
+// @Success      200  {object}  util.Response{data=[]domain.Category}  "list of active categories"
+// @Failure      500  {object}  util.Response
 // @Router       /news/categories [get]
 func (h *NewsHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.newsSvc.GetCategories(r.Context())
@@ -38,14 +39,15 @@ func (h *NewsHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 
 // GetFeed godoc
 // @Summary      Get news feed
-// @Description  Returns paginated news feed with optional hero article and category filter
+// @Description  Returns a paginated news feed. When include_hero=true (default), the first article on page 1 is separated as hero_article for the Flutter Hero+Grid UI. Supports infinite scroll via the page query param.
 // @Tags         news
 // @Produce      json
-// @Param        category     query string  false "Category slug filter"
-// @Param        page         query integer false "Page number (default: 1)"
-// @Param        limit        query integer false "Items per page (default: 10, max: 50)"
-// @Param        include_hero query boolean false "Separate first article as hero (default: true)"
-// @Success      200 {object} util.Response{data=domain.NewsFeedResponse}
+// @Param        category     query    string   false  "Filter by category slug (e.g. 'technology', 'sports')"
+// @Param        page         query    integer  false  "Page number, starts at 1"       default(1)
+// @Param        limit        query    integer  false  "Items per page, max 50"         default(10)
+// @Param        include_hero query    boolean  false  "Separate first article as hero" default(true)
+// @Success      200  {object}  util.Response{data=domain.NewsFeedResponse}  "paginated feed"
+// @Failure      500  {object}  util.Response
 // @Router       /news [get]
 func (h *NewsHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -76,12 +78,14 @@ func (h *NewsHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 
 // GetArticle godoc
 // @Summary      Get article detail
-// @Description  Returns full article content by slug
+// @Description  Returns the full content of a single article by its URL slug
 // @Tags         news
 // @Produce      json
-// @Param        slug path string true "Article slug"
-// @Success      200 {object} util.Response{data=domain.Article}
-// @Failure      404 {object} util.Response
+// @Param        slug  path      string  true  "Article slug (e.g. 'apples-ai-leap-iphone-16-pro')"
+// @Success      200   {object}  util.Response{data=domain.Article}  "article detail"
+// @Failure      400   {object}  util.Response
+// @Failure      404   {object}  util.Response
+// @Failure      500   {object}  util.Response
 // @Router       /news/{slug} [get]
 func (h *NewsHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	// Extract slug from path: /api/v1/news/{slug}
@@ -103,5 +107,5 @@ func (h *NewsHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	util.OK(w, "article retrieved", article)
 }
 
-// Ensure json import used (for potential future body parsing)
+// Ensure correct imports are used
 var _ = json.NewDecoder

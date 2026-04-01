@@ -23,6 +23,81 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/articles": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a news article. Slug is auto-generated from the title. read_time_minutes is auto-calculated (200 words/min). published_at is set automatically when status=published.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Create a new article (Admin)",
+                "parameters": [
+                    {
+                        "description": "Article payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateArticleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "article created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/util.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.Article"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "admin access required",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login with email and password to get tokens",
@@ -43,7 +118,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_domain.LoginRequest"
+                            "$ref": "#/definitions/domain.LoginRequest"
                         }
                     }
                 ],
@@ -53,13 +128,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/free-api-news_internal_util.Response"
+                                    "$ref": "#/definitions/util.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/free-api-news_internal_domain.AuthResponse"
+                                            "$ref": "#/definitions/domain.AuthResponse"
                                         }
                                     }
                                 }
@@ -69,13 +144,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     }
                 }
@@ -119,25 +194,25 @@ const docTemplate = `{
                     "200": {
                         "description": "logged out successfully",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     }
                 }
@@ -164,7 +239,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/free-api-news_internal_util.Response"
+                                    "$ref": "#/definitions/util.Response"
                                 },
                                 {
                                     "type": "object",
@@ -189,7 +264,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     }
                 }
@@ -215,7 +290,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_domain.RefreshRequest"
+                            "$ref": "#/definitions/domain.RefreshRequest"
                         }
                     }
                 ],
@@ -225,13 +300,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/free-api-news_internal_util.Response"
+                                    "$ref": "#/definitions/util.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/free-api-news_internal_domain.AuthResponse"
+                                            "$ref": "#/definitions/domain.AuthResponse"
                                         }
                                     }
                                 }
@@ -241,13 +316,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     }
                 }
@@ -273,7 +348,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_domain.RegisterRequest"
+                            "$ref": "#/definitions/domain.RegisterRequest"
                         }
                     }
                 ],
@@ -283,13 +358,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/free-api-news_internal_util.Response"
+                                    "$ref": "#/definitions/util.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/free-api-news_internal_domain.AuthResponse"
+                                            "$ref": "#/definitions/domain.AuthResponse"
                                         }
                                     }
                                 }
@@ -299,19 +374,186 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/free-api-news_internal_util.Response"
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/news": {
+            "get": {
+                "description": "Returns a paginated news feed. When include_hero=true (default), the first article on page 1 is separated as hero_article for the Flutter Hero+Grid UI. Supports infinite scroll via the page query param.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "news"
+                ],
+                "summary": "Get news feed",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by category slug (e.g. 'technology', 'sports')",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number, starts at 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page, max 50",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Separate first article as hero",
+                        "name": "include_hero",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "paginated feed",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/util.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.NewsFeedResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/news/categories": {
+            "get": {
+                "description": "Returns all active news categories available as filter chips in the feed UI",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "news"
+                ],
+                "summary": "List active categories",
+                "responses": {
+                    "200": {
+                        "description": "list of active categories",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/util.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.Category"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/news/{slug}": {
+            "get": {
+                "description": "Returns the full content of a single article by its URL slug",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "news"
+                ],
+                "summary": "Get article detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Article slug (e.g. 'apples-ai-leap-iphone-16-pro')",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "article detail",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/util.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.Article"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
                         }
                     }
                 }
@@ -319,7 +561,61 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "free-api-news_internal_domain.AuthResponse": {
+        "domain.Article": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "integer"
+                },
+                "author_name": {
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "content": {
+                    "description": "omitted in list, included in detail",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "excerpt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "read_time_minutes": {
+                    "type": "integer"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.AuthResponse": {
             "type": "object",
             "properties": {
                 "access_expiry": {
@@ -332,11 +628,61 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/free-api-news_internal_domain.User"
+                    "$ref": "#/definitions/domain.User"
                 }
             }
         },
-        "free-api-news_internal_domain.LoginRequest": {
+        "domain.Category": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CreateArticleRequest": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "excerpt": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"draft\" or \"published\"",
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -351,7 +697,41 @@ const docTemplate = `{
                 }
             }
         },
-        "free-api-news_internal_domain.RefreshRequest": {
+        "domain.NewsFeedResponse": {
+            "type": "object",
+            "properties": {
+                "feed_articles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Article"
+                    }
+                },
+                "hero_article": {
+                    "$ref": "#/definitions/domain.Article"
+                },
+                "meta": {
+                    "$ref": "#/definitions/domain.PaginationMeta"
+                }
+            }
+        },
+        "domain.PaginationMeta": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.RefreshRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -362,7 +742,7 @@ const docTemplate = `{
                 }
             }
         },
-        "free-api-news_internal_domain.RegisterRequest": {
+        "domain.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -384,7 +764,7 @@ const docTemplate = `{
                 }
             }
         },
-        "free-api-news_internal_domain.User": {
+        "domain.User": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -399,12 +779,15 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "role": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 }
             }
         },
-        "free-api-news_internal_util.Response": {
+        "util.Response": {
             "type": "object",
             "properties": {
                 "data": {},
@@ -432,8 +815,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "103.181.143.73:8081",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "Free API News Auth",
-	Description:      "Backend REST API for a Flutter News App with Auth",
+	Title:            "Free API News",
+	Description:      "Backend REST API for a Flutter News App with Auth + News Feature",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

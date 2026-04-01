@@ -1,6 +1,42 @@
 basePath: /api/v1
 definitions:
-  free-api-news_internal_domain.AuthResponse:
+  domain.Article:
+    properties:
+      author_id:
+        type: integer
+      author_name:
+        type: string
+      category_id:
+        type: integer
+      category_name:
+        type: string
+      content:
+        description: omitted in list, included in detail
+        type: string
+      created_at:
+        type: string
+      excerpt:
+        type: string
+      id:
+        type: integer
+      image_url:
+        type: string
+      published_at:
+        type: string
+      read_time_minutes:
+        type: integer
+      slug:
+        type: string
+      status:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.AuthResponse:
     properties:
       access_expiry:
         type: string
@@ -9,9 +45,42 @@ definitions:
       refresh_token:
         type: string
       user:
-        $ref: '#/definitions/free-api-news_internal_domain.User'
+        $ref: '#/definitions/domain.User'
     type: object
-  free-api-news_internal_domain.LoginRequest:
+  domain.Category:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.CreateArticleRequest:
+    properties:
+      category_id:
+        type: integer
+      content:
+        type: string
+      excerpt:
+        type: string
+      image_url:
+        type: string
+      status:
+        description: '"draft" or "published"'
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+    type: object
+  domain.LoginRequest:
     properties:
       email:
         type: string
@@ -21,14 +90,36 @@ definitions:
     - email
     - password
     type: object
-  free-api-news_internal_domain.RefreshRequest:
+  domain.NewsFeedResponse:
+    properties:
+      feed_articles:
+        items:
+          $ref: '#/definitions/domain.Article'
+        type: array
+      hero_article:
+        $ref: '#/definitions/domain.Article'
+      meta:
+        $ref: '#/definitions/domain.PaginationMeta'
+    type: object
+  domain.PaginationMeta:
+    properties:
+      current_page:
+        type: integer
+      limit:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  domain.RefreshRequest:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  free-api-news_internal_domain.RegisterRequest:
+  domain.RegisterRequest:
     properties:
       email:
         type: string
@@ -44,7 +135,7 @@ definitions:
     - name
     - password
     type: object
-  free-api-news_internal_domain.User:
+  domain.User:
     properties:
       created_at:
         type: string
@@ -54,10 +145,12 @@ definitions:
         type: integer
       name:
         type: string
+      role:
+        type: string
       updated_at:
         type: string
     type: object
-  free-api-news_internal_util.Response:
+  util.Response:
     properties:
       data: {}
       message:
@@ -70,14 +163,61 @@ info:
   contact:
     email: support@example.com
     name: API Support
-  description: Backend REST API for a Flutter News App with Auth
+  description: Backend REST API for a Flutter News App with Auth + News Feature
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: http://swagger.io/terms/
-  title: Free API News Auth
+  title: Free API News
   version: "1.0"
 paths:
+  /admin/articles:
+    post:
+      consumes:
+      - application/json
+      description: Creates a news article. Slug is auto-generated from the title.
+        read_time_minutes is auto-calculated (200 words/min). published_at is set
+        automatically when status=published.
+      parameters:
+      - description: Article payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateArticleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: article created
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Article'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/util.Response'
+        "403":
+          description: admin access required
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new article (Admin)
+      tags:
+      - admin
   /auth/login:
     post:
       consumes:
@@ -89,7 +229,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/free-api-news_internal_domain.LoginRequest'
+          $ref: '#/definitions/domain.LoginRequest'
       produces:
       - application/json
       responses:
@@ -97,19 +237,19 @@ paths:
           description: login successful
           schema:
             allOf:
-            - $ref: '#/definitions/free-api-news_internal_util.Response'
+            - $ref: '#/definitions/util.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/free-api-news_internal_domain.AuthResponse'
+                  $ref: '#/definitions/domain.AuthResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
       summary: Login user
       tags:
       - auth
@@ -134,19 +274,19 @@ paths:
         "200":
           description: logged out successfully
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
       security:
       - BearerAuth: []
       summary: Logout user
@@ -162,7 +302,7 @@ paths:
           description: authenticated user
           schema:
             allOf:
-            - $ref: '#/definitions/free-api-news_internal_util.Response'
+            - $ref: '#/definitions/util.Response'
             - properties:
                 data:
                   properties:
@@ -176,7 +316,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
       security:
       - BearerAuth: []
       summary: Get current user
@@ -194,7 +334,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/free-api-news_internal_domain.RefreshRequest'
+          $ref: '#/definitions/domain.RefreshRequest'
       produces:
       - application/json
       responses:
@@ -202,19 +342,19 @@ paths:
           description: token refreshed
           schema:
             allOf:
-            - $ref: '#/definitions/free-api-news_internal_util.Response'
+            - $ref: '#/definitions/util.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/free-api-news_internal_domain.AuthResponse'
+                  $ref: '#/definitions/domain.AuthResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
       summary: Refresh token pair
       tags:
       - auth
@@ -229,7 +369,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/free-api-news_internal_domain.RegisterRequest'
+          $ref: '#/definitions/domain.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -237,26 +377,131 @@ paths:
           description: registration successful
           schema:
             allOf:
-            - $ref: '#/definitions/free-api-news_internal_util.Response'
+            - $ref: '#/definitions/util.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/free-api-news_internal_domain.AuthResponse'
+                  $ref: '#/definitions/domain.AuthResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/free-api-news_internal_util.Response'
+            $ref: '#/definitions/util.Response'
       summary: Register a new user
       tags:
       - auth
+  /news:
+    get:
+      description: Returns a paginated news feed. When include_hero=true (default),
+        the first article on page 1 is separated as hero_article for the Flutter Hero+Grid
+        UI. Supports infinite scroll via the page query param.
+      parameters:
+      - description: Filter by category slug (e.g. 'technology', 'sports')
+        in: query
+        name: category
+        type: string
+      - default: 1
+        description: Page number, starts at 1
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page, max 50
+        in: query
+        name: limit
+        type: integer
+      - default: true
+        description: Separate first article as hero
+        in: query
+        name: include_hero
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: paginated feed
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.NewsFeedResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: Get news feed
+      tags:
+      - news
+  /news/{slug}:
+    get:
+      description: Returns the full content of a single article by its URL slug
+      parameters:
+      - description: Article slug (e.g. 'apples-ai-leap-iphone-16-pro')
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: article detail
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.Article'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: Get article detail
+      tags:
+      - news
+  /news/categories:
+    get:
+      description: Returns all active news categories available as filter chips in
+        the feed UI
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: list of active categories
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.Category'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: List active categories
+      tags:
+      - news
 securityDefinitions:
   BearerAuth:
     in: header
