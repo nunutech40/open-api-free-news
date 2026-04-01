@@ -1,0 +1,20 @@
+[Unit]
+Description=Free API News - Go REST API
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=nunuadmin
+WorkingDirectory=/home/nunuadmin/apps/free-api-news
+ExecStart=/home/nunuadmin/apps/free-api-news/free-api-news
+Restart=on-failure
+RestartSec=5s
+EnvironmentFile=/home/nunuadmin/apps/free-api-news/.env
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=free-api-news
+
+[Install]
+WantedBy=multi-user.target
