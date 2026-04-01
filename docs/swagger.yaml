@@ -51,6 +51,8 @@ definitions:
     properties:
       created_at:
         type: string
+      description:
+        type: string
       id:
         type: integer
       is_active:
