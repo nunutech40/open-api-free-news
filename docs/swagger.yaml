@@ -15,7 +15,7 @@ definitions:
         type: string
       created_at:
         type: string
-      excerpt:
+      description:
         type: string
       id:
         type: integer
@@ -70,7 +70,7 @@ definitions:
         type: integer
       content:
         type: string
-      excerpt:
+      description:
         type: string
       image_url:
         type: string

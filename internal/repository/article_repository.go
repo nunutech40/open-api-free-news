@@ -80,7 +80,7 @@ func (r *articleRepository) FindFeed(ctx context.Context, query *domain.NewsFeed
 		if err := rows.Scan(
 			&a.ID, &a.CategoryID, &a.CategoryName,
 			&a.AuthorID, &a.AuthorName,
-			&a.Title, &a.Slug, &a.Excerpt,
+			&a.Title, &a.Slug, &a.Description,
 			&a.ImageURL, &a.ThumbnailURL,
 			&a.ReadTimeMinutes, &a.Status,
 			&a.PublishedAt, &a.CreatedAt, &a.UpdatedAt,
@@ -112,7 +112,7 @@ func (r *articleRepository) FindBySlug(ctx context.Context, slug string) (*domai
 	err := r.db.QueryRowContext(ctx, query, slug).Scan(
 		&a.ID, &a.CategoryID, &a.CategoryName,
 		&a.AuthorID, &a.AuthorName,
-		&a.Title, &a.Slug, &a.Excerpt,
+		&a.Title, &a.Slug, &a.Description,
 		&a.Content,
 		&a.ImageURL, &a.ThumbnailURL,
 		&a.ReadTimeMinutes, &a.Status,
@@ -138,7 +138,7 @@ func (r *articleRepository) Create(ctx context.Context, a *domain.Article) (*dom
 	`
 	now := time.Now()
 	err := r.db.QueryRowContext(ctx, query,
-		a.CategoryID, a.AuthorID, a.Title, a.Slug, a.Excerpt, a.Content,
+		a.CategoryID, a.AuthorID, a.Title, a.Slug, a.Description, a.Content,
 		a.ImageURL, a.ThumbnailURL, a.ReadTimeMinutes, a.Status, a.PublishedAt, now,
 	).Scan(&a.ID, &a.CreatedAt, &a.UpdatedAt)
 	if err != nil {
@@ -159,7 +159,7 @@ func (r *articleRepository) Update(ctx context.Context, a *domain.Article) (*dom
 	`
 	now := time.Now()
 	err := r.db.QueryRowContext(ctx, query,
-		a.CategoryID, a.Title, a.Slug, a.Excerpt, a.Content,
+		a.CategoryID, a.Title, a.Slug, a.Description, a.Content,
 		a.ImageURL, a.ThumbnailURL, a.ReadTimeMinutes,
 		a.Status, a.PublishedAt, now, a.ID,
 	).Scan(&a.UpdatedAt)

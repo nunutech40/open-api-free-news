@@ -583,7 +583,7 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "excerpt": {
+                "description": {
                     "type": "string"
                 },
                 "id": {
@@ -667,7 +667,7 @@ const docTemplate = `{
                 "content": {
                     "type": "string"
                 },
-                "excerpt": {
+                "description": {
                     "type": "string"
                 },
                 "image_url": {

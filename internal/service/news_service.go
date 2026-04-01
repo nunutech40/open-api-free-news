@@ -127,7 +127,7 @@ func (s *newsService) CreateArticle(ctx context.Context, authorID int64, req *do
 		AuthorID:        authorID,
 		Title:           req.Title,
 		Slug:            slug,
-		Excerpt:         req.Excerpt,
+		Description:         req.Description,
 		Content:         req.Content,
 		ImageURL:        req.ImageURL,
 		ThumbnailURL:    req.ThumbnailURL,

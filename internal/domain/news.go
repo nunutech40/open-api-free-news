@@ -22,7 +22,7 @@ type Article struct {
 	AuthorName      string     `json:"author_name"`
 	Title           string     `json:"title"`
 	Slug            string     `json:"slug"`
-	Excerpt         string     `json:"excerpt"`
+	Description     string     `json:"description"`
 	Content         string     `json:"content,omitempty"` // omitted in list, included in detail
 	ImageURL        string     `json:"image_url"`
 	ThumbnailURL    string     `json:"thumbnail_url,omitempty"`
@@ -60,7 +60,7 @@ type NewsFeedQuery struct {
 type CreateArticleRequest struct {
 	CategoryID   int64  `json:"category_id"`
 	Title        string `json:"title"`
-	Excerpt      string `json:"excerpt"`
+	Description  string `json:"description"`
 	Content      string `json:"content"`
 	ImageURL     string `json:"image_url"`
 	ThumbnailURL string `json:"thumbnail_url"`
