@@ -40,10 +40,10 @@ func New(
 	mux.Handle("POST /api/v1/auth/logout", authMid(http.HandlerFunc(authHandler.Logout)))
 	mux.Handle("GET /api/v1/auth/me",      authMid(http.HandlerFunc(authHandler.Me)))
 
-	// ── News (public) ─────────────────────────────────────────────────────────
-	mux.HandleFunc("GET /api/v1/news/categories",   newsHandler.GetCategories)
-	mux.HandleFunc("GET /api/v1/news",              newsHandler.GetFeed)
-	mux.HandleFunc("GET /api/v1/news/{slug}",       newsHandler.GetArticle)
+	// ── News (protected — requires valid JWT for Flutter auth practice) ──────
+	mux.Handle("GET /api/v1/news/categories", authMid(http.HandlerFunc(newsHandler.GetCategories)))
+	mux.Handle("GET /api/v1/news",            authMid(http.HandlerFunc(newsHandler.GetFeed)))
+	mux.Handle("GET /api/v1/news/{slug}",     authMid(http.HandlerFunc(newsHandler.GetArticle)))
 
 	// ── Admin (JWT + admin role required) ─────────────────────────────────────
 	mux.Handle("POST /api/v1/admin/articles",

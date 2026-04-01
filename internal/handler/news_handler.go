@@ -22,7 +22,9 @@ func NewNewsHandler(newsSvc domain.NewsService) *NewsHandler {
 // @Description  Returns all active news categories available as filter chips in the feed UI
 // @Tags         news
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object}  util.Response{data=[]domain.Category}  "list of active categories"
+// @Failure      401  {object}  util.Response
 // @Failure      500  {object}  util.Response
 // @Router       /news/categories [get]
 func (h *NewsHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
@@ -42,11 +44,13 @@ func (h *NewsHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 // @Description  Returns a paginated news feed. When include_hero=true (default), the first article on page 1 is separated as hero_article for the Flutter Hero+Grid UI. Supports infinite scroll via the page query param.
 // @Tags         news
 // @Produce      json
+// @Security     BearerAuth
 // @Param        category     query    string   false  "Filter by category slug (e.g. 'technology', 'sports')"
 // @Param        page         query    integer  false  "Page number, starts at 1"       default(1)
 // @Param        limit        query    integer  false  "Items per page, max 50"         default(10)
 // @Param        include_hero query    boolean  false  "Separate first article as hero" default(true)
 // @Success      200  {object}  util.Response{data=domain.NewsFeedResponse}  "paginated feed"
+// @Failure      401  {object}  util.Response
 // @Failure      500  {object}  util.Response
 // @Router       /news [get]
 func (h *NewsHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
@@ -81,9 +85,11 @@ func (h *NewsHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 // @Description  Returns the full content of a single article by its URL slug
 // @Tags         news
 // @Produce      json
+// @Security     BearerAuth
 // @Param        slug  path      string  true  "Article slug (e.g. 'apples-ai-leap-iphone-16-pro')"
 // @Success      200   {object}  util.Response{data=domain.Article}  "article detail"
 // @Failure      400   {object}  util.Response
+// @Failure      401   {object}  util.Response
 // @Failure      404   {object}  util.Response
 // @Failure      500   {object}  util.Response
 // @Router       /news/{slug} [get]

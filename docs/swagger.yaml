@@ -436,10 +436,16 @@ paths:
                 data:
                   $ref: '#/definitions/domain.NewsFeedResponse'
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/util.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
       summary: Get news feed
       tags:
       - news
@@ -468,6 +474,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/util.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/util.Response'
         "404":
           description: Not Found
           schema:
@@ -476,6 +486,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
       summary: Get article detail
       tags:
       - news
@@ -497,10 +509,16 @@ paths:
                     $ref: '#/definitions/domain.Category'
                   type: array
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/util.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
       summary: List active categories
       tags:
       - news

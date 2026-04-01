@@ -394,6 +394,11 @@ const docTemplate = `{
         },
         "/news": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Returns a paginated news feed. When include_hero=true (default), the first article on page 1 is separated as hero_article for the Flutter Hero+Grid UI. Supports infinite scroll via the page query param.",
                 "produces": [
                     "application/json"
@@ -450,6 +455,12 @@ const docTemplate = `{
                             ]
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -461,6 +472,11 @@ const docTemplate = `{
         },
         "/news/categories": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Returns all active news categories available as filter chips in the feed UI",
                 "produces": [
                     "application/json"
@@ -491,6 +507,12 @@ const docTemplate = `{
                             ]
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -502,6 +524,11 @@ const docTemplate = `{
         },
         "/news/{slug}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Returns the full content of a single article by its URL slug",
                 "produces": [
                     "application/json"
@@ -540,6 +567,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/util.Response"
                         }
