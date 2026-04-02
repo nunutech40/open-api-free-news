@@ -28,7 +28,7 @@ migrate-local:
 
 deploy: build
 	@echo "📦 Deploying $(APP_NAME) to $(VPS)..."
-	ssh $(VPS) "mkdir -p $(DEPLOY_DIR)/migrations && sudo systemctl stop $(APP_NAME) || true"
+	ssh $(VPS) "mkdir -p $(DEPLOY_DIR)/migrations $(DEPLOY_DIR)/public/uploads && sudo systemctl stop $(APP_NAME) || true"
 	scp $(BINARY)           $(VPS):$(DEPLOY_DIR)/$(APP_NAME)
 	scp .env.example        $(VPS):$(DEPLOY_DIR)/.env.example
 	scp -r migrations/*     $(VPS):$(DEPLOY_DIR)/migrations/
@@ -41,11 +41,12 @@ deploy: build
 
 deploy-migrate:
 	@echo "🗃  Running migrations on VPS..."
-	ssh $(VPS) "psql -U postgres -d free_api_news -f $(DEPLOY_DIR)/migrations/001_create_users_table.sql && \
-	            psql -U postgres -d free_api_news -f $(DEPLOY_DIR)/migrations/002_create_tokens_table.sql && \
-	            psql -U postgres -d free_api_news -f $(DEPLOY_DIR)/migrations/003_create_categories_table.sql && \
-	            psql -U postgres -d free_api_news -f $(DEPLOY_DIR)/migrations/004_create_articles_table.sql && \
-	            psql -U postgres -d free_api_news -f $(DEPLOY_DIR)/migrations/005_add_role_to_users.sql"
+	ssh $(VPS) "sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/001_create_users_table.sql && \
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/002_create_tokens_table.sql && \
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/003_create_categories_table.sql && \
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/004_create_articles_table.sql && \
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/005_add_role_to_users.sql && \
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/009_add_profile_fields.sql"
 
 logs:
 	ssh $(VPS) "sudo journalctl -u $(APP_NAME) -f"

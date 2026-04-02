@@ -56,8 +56,10 @@ cp .env.example .env
 
 ```bash
 createdb free_api_news
-psql -U postgres -d free_api_news -f migrations/001_create_users_table.sql
-psql -U postgres -d free_api_news -f migrations/002_create_tokens_table.sql
+# Run all migrations in order
+for f in migrations/*.sql; do
+    psql -U postgres -d free_api_news -f "$f"
+done
 ```
 
 ### 4. Run
@@ -71,15 +73,21 @@ make run
 
 ## API Endpoints
 
-| Method | Path                       | Auth Required | Description        |
-|--------|----------------------------|---------------|--------------------|
-| GET    | `/swagger/index.html`          | No            | Swagger UI API Docs|
-| GET    | `/health`                  | No            | Health check       |
-| POST   | `/api/v1/auth/register`    | No            | Register new user  |
-| POST   | `/api/v1/auth/login`       | No            | Login              |
-| POST   | `/api/v1/auth/logout`      | ✅ Bearer     | Logout             |
-| POST   | `/api/v1/auth/refresh`     | No            | Refresh token pair |
-| GET    | `/api/v1/auth/me`          | ✅ Bearer     | Get current user   |
+| Method | Path                           | Auth Required   | Description                   |
+|--------|--------------------------------|-----------------|-------------------------------|
+| GET    | `/swagger/index.html`          | No              | Swagger UI API Docs           |
+| GET    | `/health`                      | No              | Health check                  |
+| POST   | `/api/v1/auth/register`        | No              | Register new user             |
+| POST   | `/api/v1/auth/login`           | No              | Login                         |
+| POST   | `/api/v1/auth/logout`          | ✅ Bearer       | Logout                        |
+| POST   | `/api/v1/auth/refresh`         | No              | Refresh token pair            |
+| GET    | `/api/v1/auth/me`              | ✅ Bearer       | Get current user              |
+| PUT    | `/api/v1/auth/me`              | ✅ Bearer       | Update current user profile   |
+| POST   | `/api/v1/upload`               | ✅ Bearer       | Upload an image file (multipart/form-data)    |
+| GET    | `/api/v1/news/categories`      | ✅ Bearer       | List news categories          |
+| GET    | `/api/v1/news`                 | ✅ Bearer       | Get news feed with pagination |
+| GET    | `/api/v1/news/{slug}`          | ✅ Bearer       | Get full article detail       |
+| POST   | `/api/v1/admin/articles`       | ✅ Bearer+Admin | Create a new article          |
 
 ### Register
 

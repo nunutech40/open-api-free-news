@@ -504,3 +504,27 @@ Konsisten dengan format Auth yang sudah ada:
 | 8      | Update `router.go` dengan route baru               | `router/`       |
 | 9      | Test manual via Postman                            | -               |
 | 10     | Update collection Postman                          | `*.postman.json`|
+
+## 10. Update Profile & Extension Feature (Added 2026-04-02)
+
+### 10.1 Database Expansion (Migration 009)
+Extended `users` table fields:
+* `avatar_url` (VARCHAR): User's profile picture.
+* `bio` (TEXT): Biographical section.
+* `phone` (VARCHAR): Contact Number.
+* `preferences` (JSONB): Mapped JSON settings (e.g. `{"theme":"dark"}`).
+
+### 10.2 Domain layer Additions
+```go
+type UpdateProfileRequest struct {
+    Name        string `json:"name" validate:"required,min=2,max=100"`
+    AvatarURL   string `json:"avatar_url"`
+    Bio         string `json:"bio"`
+    Phone       string `json:"phone"`
+    Preferences string `json:"preferences"`
+}
+```
+
+### 10.3 API Endpoints
+1. `GET /api/v1/auth/me`: Modified to perform actual DB lookups inside `AuthService.GetProfile` mapping all new records, including `avatar_url`.
+2. `PUT /api/v1/auth/me`: Invokes `AuthService.UpdateProfile` calling the new `UserRepository.Update(User)` logic.

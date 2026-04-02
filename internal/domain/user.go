@@ -4,13 +4,17 @@ import "time"
 
 // User is the core domain entity
 type User struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"` // never expose
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Email       string    `json:"email"`
+	Password    string    `json:"-"` // never expose
+	Role        string    `json:"role"`
+	AvatarURL   string    `json:"avatar_url"`
+	Bio         string    `json:"bio"`
+	Phone       string    `json:"phone"`
+	Preferences string    `json:"preferences"` // JSON encoded string for simplicity, or json.RawMessage
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Token represents an auth token pair
@@ -49,4 +53,13 @@ type AuthResponse struct {
 // RefreshRequest is the input for refreshing tokens
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+// UpdateProfileRequest is the input for updating user profile
+type UpdateProfileRequest struct {
+	Name        string `json:"name" validate:"required,min=2,max=100"`
+	AvatarURL   string `json:"avatar_url"`
+	Bio         string `json:"bio"`
+	Phone       string `json:"phone"`
+	Preferences string `json:"preferences"`
 }

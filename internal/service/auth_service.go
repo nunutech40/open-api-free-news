@@ -101,6 +101,42 @@ func (s *authService) RefreshToken(ctx context.Context, req *domain.RefreshReque
 	return s.issueTokens(ctx, user)
 }
 
+func (s *authService) GetProfile(ctx context.Context, userID int64) (*domain.User, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+	return user, nil
+}
+
+func (s *authService) UpdateProfile(ctx context.Context, userID int64, req *domain.UpdateProfileRequest) (*domain.User, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	user.Name = req.Name
+	user.AvatarURL = req.AvatarURL
+	user.Bio = req.Bio
+	user.Phone = req.Phone
+	if req.Preferences != "" {
+		user.Preferences = req.Preferences
+	}
+
+	err = s.userRepo.Update(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // issueTokens generates a new token pair and persists it
 func (s *authService) issueTokens(ctx context.Context, user *domain.User) (*domain.AuthResponse, error) {
 	pair, err := util.GenerateTokenPair(user.ID, user.Email, user.Role, s.jwtCfg)

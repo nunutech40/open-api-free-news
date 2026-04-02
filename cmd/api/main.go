@@ -61,9 +61,16 @@ func main() {
 	authHandler  := handler.NewAuthHandler(authSvc)
 	newsHandler  := handler.NewNewsHandler(newsSvc)
 	adminHandler := handler.NewAdminHandler(newsSvc)
+	
+	// Public URL for constructed image links
+	publicURL := "http://" + cfg.Database.Host + ":" + cfg.App.Port
+	if cfg.App.Env == "production" {
+		publicURL = "http://103.181.143.73:" + cfg.App.Port
+	}
+	uploadHandler := handler.NewUploadHandler(publicURL)
 
 	// ── Router ────────────────────────────────────────────────────────────────
-	r := router.New(authHandler, newsHandler, adminHandler, &cfg.JWT)
+	r := router.New(authHandler, newsHandler, adminHandler, uploadHandler, &cfg.JWT)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.App.Port,

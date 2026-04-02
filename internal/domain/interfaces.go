@@ -7,6 +7,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) (*User, error)
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	FindByID(ctx context.Context, id int64) (*User, error)
+	Update(ctx context.Context, user *User) error
 }
 
 // TokenRepository defines data access for tokens
@@ -24,6 +25,8 @@ type AuthService interface {
 	Login(ctx context.Context, req *LoginRequest) (*AuthResponse, error)
 	Logout(ctx context.Context, refreshToken string) error
 	RefreshToken(ctx context.Context, req *RefreshRequest) (*AuthResponse, error)
+	GetProfile(ctx context.Context, userID int64) (*User, error)
+	UpdateProfile(ctx context.Context, userID int64, req *UpdateProfileRequest) (*User, error)
 }
 
 // CategoryRepository defines data access for news categories

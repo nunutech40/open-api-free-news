@@ -137,8 +137,29 @@ definitions:
     - name
     - password
     type: object
+  domain.UpdateProfileRequest:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        type: string
+      preferences:
+        type: string
+    required:
+    - name
+    type: object
   domain.User:
     properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
       created_at:
         type: string
       email:
@@ -146,6 +167,11 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+      phone:
+        type: string
+      preferences:
+        description: JSON encoded string for simplicity, or json.RawMessage
         type: string
       role:
         type: string
@@ -307,21 +333,59 @@ paths:
             - $ref: '#/definitions/util.Response'
             - properties:
                 data:
-                  properties:
-                    email:
-                      type: string
-                    user_id:
-                      format: int64
-                      type: integer
-                  type: object
+                  $ref: '#/definitions/domain.User'
               type: object
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/util.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
       security:
       - BearerAuth: []
       summary: Get current user
+      tags:
+      - auth
+    put:
+      consumes:
+      - application/json
+      description: Updates authenticated user profile data
+      parameters:
+      - description: Update Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: profile updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
       tags:
       - auth
   /auth/refresh:
@@ -522,6 +586,46 @@ paths:
       summary: List active categories
       tags:
       - news
+  /upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload an image file (multipart/form-data) and returns its public
+        URL
+      parameters:
+      - description: Image file to upload
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File uploaded
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  properties:
+                    url:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
+      security:
+      - BearerAuth: []
+      summary: Upload an image
+      tags:
+      - upload
 securityDefinitions:
   BearerAuth:
     in: header

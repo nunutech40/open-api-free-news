@@ -148,8 +148,9 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // @Tags         auth
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200     {object} util.Response{data=object{user_id=int64,email=string}} "authenticated user"
+// @Success      200     {object} util.Response{data=domain.User} "authenticated user"
 // @Failure      401     {object} util.Response
+// @Failure      500     {object} util.Response
 // @Router       /auth/me [get]
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(middleware.UserClaimsKey).(*util.Claims)
@@ -157,8 +158,52 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		util.Unauthorized(w, "unauthorized")
 		return
 	}
-	util.OK(w, "authenticated user", map[string]interface{}{
-		"user_id": claims.UserID,
-		"email":   claims.Email,
-	})
+
+	user, err := h.authSvc.GetProfile(r.Context(), claims.UserID)
+	if err != nil {
+		util.InternalError(w, err.Error())
+		return
+	}
+
+	util.OK(w, "authenticated user", user)
+}
+
+// UpdateProfile godoc
+// @Summary      Update user profile
+// @Description  Updates authenticated user profile data
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body domain.UpdateProfileRequest true "Update Data"
+// @Success      200     {object} util.Response{data=domain.User} "profile updated"
+// @Failure      400     {object} util.Response
+// @Failure      401     {object} util.Response
+// @Failure      500     {object} util.Response
+// @Router       /auth/me [put]
+func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(middleware.UserClaimsKey).(*util.Claims)
+	if !ok {
+		util.Unauthorized(w, "unauthorized")
+		return
+	}
+
+	var req domain.UpdateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		util.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if req.Name == "" {
+		util.BadRequest(w, "name is required")
+		return
+	}
+
+	user, err := h.authSvc.UpdateProfile(r.Context(), claims.UserID, &req)
+	if err != nil {
+		util.InternalError(w, err.Error())
+		return
+	}
+
+	util.OK(w, "profile updated successfully", user)
 }
