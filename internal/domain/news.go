@@ -51,6 +51,7 @@ type PaginationMeta struct {
 // NewsFeedQuery holds filter parameters for the news feed endpoint
 type NewsFeedQuery struct {
 	Category    string // category slug, empty = all categories
+	Search      string // search keyword
 	Page        int    // defaults to 1
 	Limit       int    // defaults to 10, max 50
 	IncludeHero bool   // if true, first article is separated as hero_article

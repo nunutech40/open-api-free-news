@@ -38,6 +38,13 @@ func (r *articleRepository) FindFeed(ctx context.Context, query *domain.NewsFeed
 		argIdx++
 	}
 
+	if query.Search != "" {
+		where += fmt.Sprintf(" AND (a.title ILIKE $%d OR a.content ILIKE $%d)", argIdx, argIdx)
+		searchPattern := "%" + query.Search + "%"
+		args = append(args, searchPattern)
+		argIdx++
+	}
+
 	// Count total items
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*) FROM articles a

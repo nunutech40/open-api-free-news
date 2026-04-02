@@ -46,6 +46,7 @@ func (h *NewsHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Security     BearerAuth
 // @Param        category     query    string   false  "Filter by category slug (e.g. 'technology', 'sports')"
+// @Param        q            query    string   false  "Search keyword"
 // @Param        page         query    integer  false  "Page number, starts at 1"       default(1)
 // @Param        limit        query    integer  false  "Items per page, max 50"         default(10)
 // @Param        include_hero query    boolean  false  "Separate first article as hero" default(true)
@@ -67,6 +68,7 @@ func (h *NewsHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 
 	query := &domain.NewsFeedQuery{
 		Category:    q.Get("category"),
+		Search:      q.Get("q"),
 		Page:        page,
 		Limit:       limit,
 		IncludeHero: includeHero,
