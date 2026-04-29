@@ -7,6 +7,8 @@ import (
 	"free-api-news/internal/domain"
 	"free-api-news/internal/util"
 	"time"
+
+	"google.golang.org/api/idtoken"
 )
 
 type authService struct {
@@ -47,7 +49,7 @@ func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest)
 	user, err := s.userRepo.Create(ctx, &domain.User{
 		Name:     req.Name,
 		Email:    req.Email,
-		Password: hashed,
+		Password: &hashed,
 	})
 	if err != nil {
 		return nil, err
@@ -61,7 +63,15 @@ func (s *authService) Login(ctx context.Context, req *domain.LoginRequest) (*dom
 	if err != nil {
 		return nil, err
 	}
-	if user == nil || !util.CheckPassword(req.Password, user.Password) {
+	if user == nil {
+		return nil, errors.New("invalid email or password")
+	}
+
+	if user.Password == nil {
+		return nil, errors.New("invalid email or password")
+	}
+
+	if !util.CheckPassword(req.Password, *user.Password) {
 		return nil, errors.New("invalid email or password")
 	}
 
@@ -70,6 +80,59 @@ func (s *authService) Login(ctx context.Context, req *domain.LoginRequest) (*dom
 
 func (s *authService) Logout(ctx context.Context, refreshToken string) error {
 	return s.tokenRepo.RevokeByRefreshToken(ctx, refreshToken)
+}
+
+func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequest) (*domain.AuthResponse, error) {
+	if req.Provider != "google" {
+		return nil, errors.New("unsupported provider")
+	}
+
+	payload, err := idtoken.Validate(ctx, req.IDToken, "")
+	if err != nil {
+		return nil, errors.New("invalid google token: " + err.Error())
+	}
+
+	email, ok := payload.Claims["email"].(string)
+	if !ok {
+		return nil, errors.New("email not found in token claims")
+	}
+	name, _ := payload.Claims["name"].(string)
+	googleID := payload.Subject
+
+	user, err := s.userRepo.FindByGoogleID(ctx, googleID)
+	if err != nil {
+		return nil, err
+	}
+
+	if user == nil {
+		userByEmail, err := s.userRepo.FindByEmail(ctx, email)
+		if err != nil {
+			return nil, err
+		}
+
+		if userByEmail != nil {
+			if err := s.userRepo.LinkGoogleID(ctx, userByEmail.ID, googleID); err != nil {
+				return nil, err
+			}
+			user = userByEmail
+			user.GoogleID = &googleID
+		} else {
+			newUser := &domain.User{
+				Name:         name,
+				Email:        email,
+				AuthProvider: "google",
+				GoogleID:     &googleID,
+			}
+			
+			createdUser, err := s.userRepo.Create(ctx, newUser)
+			if err != nil {
+				return nil, err
+			}
+			user = createdUser
+		}
+	}
+
+	return s.issueTokens(ctx, user)
 }
 
 func (s *authService) RefreshToken(ctx context.Context, req *domain.RefreshRequest) (*domain.AuthResponse, error) {
