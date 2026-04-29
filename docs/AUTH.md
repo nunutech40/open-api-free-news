@@ -35,6 +35,35 @@ Setelah login sukses, token disimpan di dua tempat:
 
 ## 2. Email/Password Login — Internal Flow
 
+### 2.1. Sequence Diagram (Interaksi Komponen)
+```mermaid
+sequenceDiagram
+    participant Client as Client (HP)
+    participant BE as Backend (Go)
+    participant DB as Database
+
+    Client->>BE: POST /auth/login {email, password}
+    BE->>DB: FindByEmail(email)
+    
+    alt User Tidak Ditemukan
+        DB-->>BE: null
+        BE-->>Client: 401 "invalid email or password"
+    else User Ditemukan
+        DB-->>BE: User data (password_hash)
+        BE->>BE: bcrypt.Compare(input, hash)
+        
+        alt Password Tidak Cocok
+            BE-->>Client: 401 "invalid email or password"
+        else Password Cocok
+            BE->>BE: Generate accessToken (15m)
+            BE->>BE: Generate refreshToken (7d)
+            BE->>DB: INSERT INTO tokens (...)
+            BE-->>Client: 200 { accessToken, refreshToken, user }
+        end
+    end
+```
+
+### 2.2. Flowchart Logic (Logika Percabangan)
 ```mermaid
 flowchart TD
     Start(["POST /auth/login {email, password}"]) --> FindEmail["Cari di DB: FindByEmail"]
@@ -71,6 +100,40 @@ Perbedaan mendasar: **Google yang memverifikasi identitas**, bukan BE.
 `idToken` adalah "surat keterangan dari Google" yang berisi: *email, name, googleId*.
 BE memvalidasi surat ini ke server Google — tidak ada password yang dicek.
 
+### 3.1. Sequence Diagram (Interaksi Komponen)
+```mermaid
+sequenceDiagram
+    participant Client as Client (HP)
+    participant Google as Google Server
+    participant BE as Backend (Go)
+    participant DB as Database
+
+    Client->>Google: Login via Native OS Popup
+    Google-->>Client: Return `idToken`
+    
+    Client->>BE: POST /auth/oauth {provider, idToken}
+    BE->>Google: Verifikasi idToken ke OAuth API
+    
+    alt Token Invalid / Expired
+        Google-->>BE: Error
+        BE-->>Client: 401 Unauthorized
+    else Token Valid
+        Google-->>BE: Data {email, name, googleId}
+        BE->>DB: Cari User (by googleId atau email)
+        
+        alt User Belum Ada
+            BE->>DB: INSERT user baru (password=NULL)
+        else User Sudah Ada
+            BE->>DB: UPDATE google_id (Account Linking)
+        end
+        
+        BE->>BE: Generate accessToken & refreshToken
+        BE->>DB: INSERT INTO tokens (...)
+        BE-->>Client: 200 { accessToken, refreshToken, user }
+    end
+```
+
+### 3.2. Flowchart Logic (Logika Percabangan)
 ```mermaid
 flowchart TD
     Start(["POST /auth/oauth {provider, idToken}"]) --> Verify["Kirim idToken ke Google API"]
