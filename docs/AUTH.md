@@ -36,30 +36,31 @@ Setelah login sukses, token disimpan di dua tempat:
 ## 2. Email/Password Login — Internal Flow
 
 ```mermaid
-sequenceDiagram
-    participant Client as Client (HP)
-    participant BE as Backend (Go)
-    participant DB as Database
-
-    Client->>BE: POST /auth/login {email, password}
-    BE->>DB: FindByEmail(email)
+flowchart TD
+    Start(["POST /auth/login {email, password}"]) --> FindEmail["Cari di DB: FindByEmail"]
+    FindEmail --> FoundEmail{"Ketemu?"}
     
-    alt User Tidak Ditemukan
-        DB-->>BE: null
-        BE-->>Client: 401 "invalid email or password"
-    else User Ditemukan
-        DB-->>BE: User data (password_hash)
-        BE->>BE: bcrypt.Compare(input, hash)
-        
-        alt Password Tidak Cocok
-            BE-->>Client: 401 "invalid email or password"
-        else Password Cocok
-            BE->>BE: Generate accessToken (15m)
-            BE->>BE: Generate refreshToken (7d)
-            BE->>DB: INSERT INTO tokens (...)
-            BE-->>Client: 200 { accessToken, refreshToken, user }
-        end
-    end
+    %% Jika tidak ketemu
+    FoundEmail -- "Tidak" --> Ret401(["Return 401: invalid email/password"])
+    
+    %% Jika ketemu
+    FoundEmail -- "Ya" --> Compare["bcrypt.Compare(input, hash)"]
+    Compare --> IsMatch{"Cocok?"}
+    
+    %% Jika password salah
+    IsMatch -- "Tidak" --> Ret401
+    
+    %% Jika password benar
+    IsMatch -- "Ya" --> IssueTokens["issueTokens: Generate JWT Pair"]
+    
+    %% Sukses
+    IssueTokens --> Ret200(["Return 200: {accessToken, refreshToken, user}"])
+    
+    %% Styling
+    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
+    classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+    class Ret200 success;
+    class Ret401 error;
 ```
 
 ---
