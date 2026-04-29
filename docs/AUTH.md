@@ -103,20 +103,25 @@ BE memvalidasi surat ini ke server Google — tidak ada password yang dicek.
 ### 3.1. Sequence Diagram (Interaksi Komponen)
 ```mermaid
 sequenceDiagram
-    participant Client as Client (HP)
+    participant App as Aplikasi Flutter
+    participant OS as OS / Google SDK
     participant Google as Google Server
     participant BE as Backend (Go)
     participant DB as Database
 
-    Client->>Google: Login via Native OS Popup
-    Google-->>Client: Return `idToken`
+    App->>OS: Panggil signIn()
+    OS->>OS: Munculkan Popup Akun Google
+    OS->>Google: User pilih akun, OS verifikasi
+    Google-->>OS: Return `idToken`
+    OS-->>App: Serahkan `idToken` ke Aplikasi
     
-    Client->>BE: POST /auth/oauth {provider, idToken}
+    Note over App, BE: App TIDAK tahu password/email.<br/>Hanya kirim idToken!
+    App->>BE: POST /auth/oauth {provider, idToken}
     BE->>Google: Verifikasi idToken ke OAuth API
     
     alt Token Invalid / Expired
         Google-->>BE: Error
-        BE-->>Client: 401 Unauthorized
+        BE-->>App: 401 Unauthorized
     else Token Valid
         Google-->>BE: Data {email, name, googleId}
         BE->>DB: Cari User (by googleId atau email)
@@ -129,7 +134,7 @@ sequenceDiagram
         
         BE->>BE: Generate accessToken & refreshToken
         BE->>DB: INSERT INTO tokens (...)
-        BE-->>Client: 200 { accessToken, refreshToken, user }
+        BE-->>App: 200 { accessToken, refreshToken, user }
     end
 ```
 
