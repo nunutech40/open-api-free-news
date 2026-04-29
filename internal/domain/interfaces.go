@@ -7,6 +7,8 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) (*User, error)
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	FindByID(ctx context.Context, id int64) (*User, error)
+	FindByGoogleID(ctx context.Context, googleID string) (*User, error)
+	LinkGoogleID(ctx context.Context, userID int64, googleID string) error
 	Update(ctx context.Context, user *User) error
 }
 
@@ -23,6 +25,7 @@ type TokenRepository interface {
 type AuthService interface {
 	Register(ctx context.Context, req *RegisterRequest) (*AuthResponse, error)
 	Login(ctx context.Context, req *LoginRequest) (*AuthResponse, error)
+	OAuthLogin(ctx context.Context, req *OAuthLoginRequest) (*AuthResponse, error)
 	Logout(ctx context.Context, refreshToken string) error
 	RefreshToken(ctx context.Context, req *RefreshRequest) (*AuthResponse, error)
 	GetProfile(ctx context.Context, userID int64) (*User, error)

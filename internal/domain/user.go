@@ -4,17 +4,19 @@ import "time"
 
 // User is the core domain entity
 type User struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Email       string    `json:"email"`
-	Password    string    `json:"-"` // never expose
-	Role        string    `json:"role"`
-	AvatarURL   string    `json:"avatar_url"`
-	Bio         string    `json:"bio"`
-	Phone       string    `json:"phone"`
-	Preferences string    `json:"preferences"` // JSON encoded string for simplicity, or json.RawMessage
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID           int64     `json:"id"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	Password     *string   `json:"-"` // pointer because it can be null for oauth users
+	Role         string    `json:"role"`
+	AuthProvider string    `json:"auth_provider"`
+	GoogleID     *string   `json:"google_id,omitempty"`
+	AvatarURL    string    `json:"avatar_url"`
+	Bio          string    `json:"bio"`
+	Phone        string    `json:"phone"`
+	Preferences  string    `json:"preferences"` // JSON encoded string for simplicity, or json.RawMessage
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // Token represents an auth token pair
@@ -40,6 +42,12 @@ type RegisterRequest struct {
 type LoginRequest struct {
 	Email    string `json:"email"    validate:"required,email"`
 	Password string `json:"password" validate:"required"`
+}
+
+// OAuthLoginRequest is the input for social sign-in
+type OAuthLoginRequest struct {
+	Provider string `json:"provider" validate:"required,oneof=google apple github"`
+	IDToken  string `json:"id_token" validate:"required"`
 }
 
 // AuthResponse is returned after a successful register/login
