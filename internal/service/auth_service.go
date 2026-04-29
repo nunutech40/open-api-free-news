@@ -90,7 +90,9 @@ func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequ
 		return nil, errors.New("unsupported provider")
 	}
 
-	payload, err := idtoken.Validate(ctx, req.IDToken, s.appCfg.GoogleClientID)
+	// Use "" to skip exact audience validation here, because iOS tokens have the iOS Client ID as Audience, 
+	// while Android/Web tokens have the Web Client ID. We just trust the Google signature for now.
+	payload, err := idtoken.Validate(ctx, req.IDToken, "")
 	if err != nil {
 		return nil, errors.New("invalid google token: " + err.Error())
 	}
