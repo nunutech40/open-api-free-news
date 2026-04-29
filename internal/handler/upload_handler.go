@@ -10,12 +10,10 @@ import (
 	"time"
 )
 
-type UploadHandler struct {
-    PublicURL string
-}
+type UploadHandler struct{}
 
-func NewUploadHandler(publicURL string) *UploadHandler {
-	return &UploadHandler{PublicURL: publicURL}
+func NewUploadHandler() *UploadHandler {
+	return &UploadHandler{}
 }
 
 // UploadImage godoc
@@ -78,9 +76,8 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Construct public URL
-    // PublicURL e.g., "http://103.181.143.73:8081"
-	fileURL := fmt.Sprintf("%s/public/uploads/%s", h.PublicURL, filename)
+	// Construct relative URL
+	fileURL := fmt.Sprintf("/public/uploads/%s", filename)
 
 	util.OK(w, "File uploaded successfully", map[string]string{
 		"url": fileURL,

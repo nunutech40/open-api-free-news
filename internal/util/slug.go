@@ -6,7 +6,7 @@ import (
 )
 
 var nonAlphaNum = regexp.MustCompile(`[^a-z0-9\s-]`)
-var multiSpace   = regexp.MustCompile(`\s+`)
+var multiSpace = regexp.MustCompile(`\s+`)
 
 // GenerateSlug converts a title into a URL-safe slug.
 // e.g. "Apple's AI Leap; The New iPhone 16 Pro" → "apples-ai-leap-the-new-iphone-16-pro"

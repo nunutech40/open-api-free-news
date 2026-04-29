@@ -19,14 +19,14 @@ type User struct {
 
 // Token represents an auth token pair
 type Token struct {
-	ID           int64     `json:"id"`
-	UserID       int64     `json:"user_id"`
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	AccessExpiry time.Time `json:"access_expiry"`
+	ID            int64     `json:"id"`
+	UserID        int64     `json:"user_id"`
+	AccessToken   string    `json:"access_token"`
+	RefreshToken  string    `json:"refresh_token"`
+	AccessExpiry  time.Time `json:"access_expiry"`
 	RefreshExpiry time.Time `json:"refresh_expiry"`
-	IsRevoked    bool      `json:"is_revoked"`
-	CreatedAt    time.Time `json:"created_at"`
+	IsRevoked     bool      `json:"is_revoked"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // RegisterRequest is the input for sign-up

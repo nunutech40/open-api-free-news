@@ -10,9 +10,9 @@ import (
 )
 
 func New(
-	authHandler   *handler.AuthHandler,
-	newsHandler   *handler.NewsHandler,
-	adminHandler  *handler.AdminHandler,
+	authHandler *handler.AuthHandler,
+	newsHandler *handler.NewsHandler,
+	adminHandler *handler.AdminHandler,
 	uploadHandler *handler.UploadHandler,
 	jwtCfg *config.JWTConfig,
 ) http.Handler {
@@ -29,7 +29,7 @@ func New(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 
-	authMid  := middleware.Auth(jwtCfg)
+	authMid := middleware.Auth(jwtCfg)
 	adminMid := middleware.AdminOnly
 
 	// Serve Static Files (Public Uploads)
@@ -37,21 +37,21 @@ func New(
 
 	// ── Auth (public) ─────────────────────────────────────────────────────────
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
-	mux.HandleFunc("POST /api/v1/auth/login",    authHandler.Login)
-	mux.HandleFunc("POST /api/v1/auth/refresh",  authHandler.RefreshToken)
+	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
+	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.RefreshToken)
 
 	// ── Auth (protected) ──────────────────────────────────────────────────────
 	mux.Handle("POST /api/v1/auth/logout", authMid(http.HandlerFunc(authHandler.Logout)))
-	mux.Handle("GET /api/v1/auth/me",      authMid(http.HandlerFunc(authHandler.Me)))
-	mux.Handle("PUT /api/v1/auth/me",      authMid(http.HandlerFunc(authHandler.UpdateProfile)))
+	mux.Handle("GET /api/v1/auth/me", authMid(http.HandlerFunc(authHandler.Me)))
+	mux.Handle("PUT /api/v1/auth/me", authMid(http.HandlerFunc(authHandler.UpdateProfile)))
 
-    // ── Upload ────────────────────────────────────────────────────────────────
-	mux.Handle("POST /api/v1/upload",      authMid(http.HandlerFunc(uploadHandler.UploadImage)))
+	// ── Upload ────────────────────────────────────────────────────────────────
+	mux.Handle("POST /api/v1/upload", authMid(http.HandlerFunc(uploadHandler.UploadImage)))
 
 	// ── News (protected — requires valid JWT for Flutter auth practice) ──────
 	mux.Handle("GET /api/v1/news/categories", authMid(http.HandlerFunc(newsHandler.GetCategories)))
-	mux.Handle("GET /api/v1/news",            authMid(http.HandlerFunc(newsHandler.GetFeed)))
-	mux.Handle("GET /api/v1/news/{slug}",     authMid(http.HandlerFunc(newsHandler.GetArticle)))
+	mux.Handle("GET /api/v1/news", authMid(http.HandlerFunc(newsHandler.GetFeed)))
+	mux.Handle("GET /api/v1/news/{slug}", authMid(http.HandlerFunc(newsHandler.GetArticle)))
 
 	// ── Admin (JWT + admin role required) ─────────────────────────────────────
 	mux.Handle("POST /api/v1/admin/articles",

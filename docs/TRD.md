@@ -24,25 +24,75 @@
 
 ---
 
-## 2. Skema Database (Migration)
+## 2. Skema Database (Actual — Verified dari PostgreSQL Live)
 
-### 2.1. Tabel `categories`
+> Schema di bawah diverifikasi langsung dari DB live via `\d <table>` pada 2026-04-29.
+
+### 2.1. Tabel `users`
+
+```sql
+-- Gabungan: migration 001 + 005 + 009
+CREATE TABLE IF NOT EXISTS users (
+    id          BIGSERIAL PRIMARY KEY,
+    name        VARCHAR(100)             NOT NULL,
+    email       VARCHAR(255)             NOT NULL UNIQUE,
+    password    TEXT                     NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    role        VARCHAR(20)              NOT NULL DEFAULT 'user',  -- 'user' | 'admin'
+    avatar_url  VARCHAR(255)             DEFAULT '',
+    bio         TEXT                     DEFAULT '',
+    phone       VARCHAR(50)              DEFAULT '',
+    preferences JSONB                    DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_users_role  ON users (role);
+
+-- Constraint
+ALTER TABLE users ADD CONSTRAINT chk_users_role CHECK (role IN ('user', 'admin'));
+```
+
+### 2.2. Tabel `tokens`
+
+```sql
+-- Migration: 002_create_tokens_table.sql
+CREATE TABLE IF NOT EXISTS tokens (
+    id             BIGSERIAL PRIMARY KEY,
+    user_id        BIGINT                   NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    access_token   TEXT                     NOT NULL,
+    refresh_token  TEXT                     NOT NULL UNIQUE,
+    access_expiry  TIMESTAMP WITH TIME ZONE NOT NULL,
+    refresh_expiry TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_revoked     BOOLEAN                  NOT NULL DEFAULT FALSE,
+    created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_tokens_user_id       ON tokens (user_id);
+CREATE INDEX idx_tokens_refresh_token ON tokens (refresh_token);
+CREATE INDEX idx_tokens_is_revoked    ON tokens (is_revoked);
+```
+
+### 2.3. Tabel `categories`
+
 ```sql
 -- Migration: 003_create_categories_table.sql
 CREATE TABLE IF NOT EXISTS categories (
-    id         BIGSERIAL PRIMARY KEY,
-    name       VARCHAR(100)         NOT NULL,
-    slug       VARCHAR(100)         NOT NULL UNIQUE,
-    is_active  BOOLEAN              NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id          BIGSERIAL PRIMARY KEY,
+    name        VARCHAR(100)             NOT NULL,
+    slug        VARCHAR(100)             NOT NULL UNIQUE,
+    is_active   BOOLEAN                  NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    description TEXT                     DEFAULT ''   -- ⚠️ Ada di DB, sempat tidak terdokumentasi
 );
 
-CREATE INDEX IF NOT EXISTS idx_categories_slug      ON categories (slug);
-CREATE INDEX IF NOT EXISTS idx_categories_is_active ON categories (is_active);
+CREATE INDEX idx_categories_slug      ON categories (slug);
+CREATE INDEX idx_categories_is_active ON categories (is_active);
 ```
 
-### 2.2. Tabel `articles`
+### 2.4. Tabel `articles`
+
 ```sql
 -- Migration: 004_create_articles_table.sql
 CREATE TABLE IF NOT EXISTS articles (
@@ -51,29 +101,33 @@ CREATE TABLE IF NOT EXISTS articles (
     author_id         BIGINT                   NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     title             VARCHAR(500)             NOT NULL,
     slug              VARCHAR(500)             NOT NULL UNIQUE,
-    excerpt           TEXT,                    -- Ringkasan singkat (untuk kartu berita Grid)
+    excerpt           TEXT,
     content           TEXT                     NOT NULL,
-    image_url         TEXT,                    -- URL gambar resolusi penuh (untuk Hero Banner)
-    thumbnail_url     TEXT,                    -- URL gambar dikompres (untuk kartu Grid, opsional)
-    read_time_minutes INTEGER                  NOT NULL DEFAULT 1, -- Dihitung otomatis saat insert/update
+    image_url         TEXT,
+    thumbnail_url     TEXT,
+    read_time_minutes INTEGER                  NOT NULL DEFAULT 1,
     status            VARCHAR(20)              NOT NULL DEFAULT 'draft', -- draft | published | archived
     published_at      TIMESTAMP WITH TIME ZONE,
     created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_articles_category_id  ON articles (category_id);
-CREATE INDEX IF NOT EXISTS idx_articles_author_id    ON articles (author_id);
-CREATE INDEX IF NOT EXISTS idx_articles_slug         ON articles (slug);
-CREATE INDEX IF NOT EXISTS idx_articles_status       ON articles (status);
-CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles (published_at DESC);
+CREATE INDEX idx_articles_category_id  ON articles (category_id);
+CREATE INDEX idx_articles_author_id    ON articles (author_id);
+CREATE INDEX idx_articles_slug         ON articles (slug);
+CREATE INDEX idx_articles_status       ON articles (status);
+CREATE INDEX idx_articles_published_at ON articles (published_at DESC);
+
+ALTER TABLE articles ADD CONSTRAINT chk_articles_status
+    CHECK (status IN ('draft', 'published', 'archived'));
 ```
 
-### 2.3. Tabel `user_roles` (Sederhana)
-```sql
--- Migration: 005_add_role_to_users.sql
-ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user';
--- Nilai yang valid: 'user' | 'admin'
+### 2.5. Entity Relationship
+
+```
+users  (1) ──────────── (N)  tokens        [CASCADE DELETE]
+users  (1) ──────────── (N)  articles      [RESTRICT DELETE]
+categories (1) ────── (N)  articles        [RESTRICT DELETE]
 ```
 
 ---
@@ -161,6 +215,119 @@ type NewsFeedQuery struct {
 ## 4. Spesifikasi Endpoint API
 
 ### Base URL: `/api/v1`
+
+---
+
+### 4.0. Auth Endpoints
+
+#### `POST /auth/register`
+
+**Auth:** ❌ Public  
+**Request:**
+```json
+{ "name": "Nunu", "email": "nunu@mail.com", "password": "secret123" }
+```
+**Response 201:**
+```json
+{
+  "status": "success",
+  "data": {
+    "access_token": "eyJ...",
+    "refresh_token": "eyJ...",
+    "access_expiry": "2026-04-29T10:15:00Z",
+    "user": { "id": 1, "name": "Nunu", "email": "nunu@mail.com", "role": "user" }
+  }
+}
+```
+
+#### `POST /auth/login`
+
+**Auth:** ❌ Public  
+**Request:**
+```json
+{ "email": "nunu@mail.com", "password": "secret123" }
+```
+**Response 200:** Format sama dengan register.
+
+#### `POST /auth/refresh`
+
+**Auth:** ❌ Public (pakai refresh_token)  
+**Request:**
+```json
+{ "refresh_token": "eyJ..." }
+```
+**Logic:** Revoke token lama → issue token pair baru.  
+**Response 200:** Format sama dengan login.
+
+#### `POST /auth/logout`
+
+**Auth:** ❌ Public (pakai refresh_token)  
+**Request:**
+```json
+{ "refresh_token": "eyJ..." }
+```
+**Response 200:**
+```json
+{ "status": "success", "message": "logged out" }
+```
+
+#### `GET /auth/me`
+
+**Auth:** ✅ Bearer JWT  
+**Response 200:**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 1,
+    "name": "Nunu Nugraha",
+    "email": "nunu@rootapp.com",
+    "role": "user",
+    "avatar_url": "http://103.181.143.73:8080/uploads/avatar_1.jpg",
+    "bio": "Flutter developer",
+    "phone": "08123456789",
+    "preferences": "{}",
+    "created_at": "2026-04-01T00:00:00Z"
+  }
+}
+```
+
+#### `PUT /auth/me`
+
+**Auth:** ✅ Bearer JWT  
+**Request:**
+```json
+{ "name": "Nunu Updated", "bio": "Senior Flutter Dev", "phone": "0812", "avatar_url": "", "preferences": "" }
+```
+**Response 200:** Format sama dengan `GET /auth/me`.
+
+#### `POST /auth/upload-avatar`
+
+**Auth:** ✅ Bearer JWT  
+**Content-Type:** `multipart/form-data`  
+**Field:** `avatar` (file image)  
+**Response 200:**
+```json
+{ "status": "success", "data": { "avatar_url": "http://103.181.143.73:8080/uploads/avatar_1.jpg" } }
+```
+
+#### `POST /auth/oauth` *(Planned — Google Sign-In)*
+
+**Auth:** ❌ Public  
+**Request:**
+```json
+{ "provider": "google", "id_token": "eyJ..." }
+```
+**Logic:**
+1. Verifikasi `id_token` ke Google API
+2. Ambil email, name, googleId dari response Google
+3. Upsert user (buat jika belum ada, login jika sudah ada)
+4. Issue JWT pair seperti login biasa
+
+**Response 200:** Format sama dengan login.
+
+> [!IMPORTANT]
+> Endpoint ini **belum diimplementasi**. Perlu tambah kolom `google_id VARCHAR(255) UNIQUE` ke tabel `users` dan library `google-auth-library` untuk verifikasi token.
 
 ---
 

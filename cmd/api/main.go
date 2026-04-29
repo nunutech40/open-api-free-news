@@ -48,26 +48,20 @@ func main() {
 	defer db.Close()
 
 	// ── Repositories ──────────────────────────────────────────────────────────
-	userRepo     := repository.NewUserRepository(db)
-	tokenRepo    := repository.NewTokenRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	tokenRepo := repository.NewTokenRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
-	articleRepo  := repository.NewArticleRepository(db)
+	articleRepo := repository.NewArticleRepository(db)
 
 	// ── Services ──────────────────────────────────────────────────────────────
 	authSvc := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	newsSvc := service.NewNewsService(categoryRepo, articleRepo)
 
 	// ── Handlers ──────────────────────────────────────────────────────────────
-	authHandler  := handler.NewAuthHandler(authSvc)
-	newsHandler  := handler.NewNewsHandler(newsSvc)
+	authHandler := handler.NewAuthHandler(authSvc)
+	newsHandler := handler.NewNewsHandler(newsSvc)
 	adminHandler := handler.NewAdminHandler(newsSvc)
-	
-	// Public URL for constructed image links
-	publicURL := "http://" + cfg.Database.Host + ":" + cfg.App.Port
-	if cfg.App.Env == "production" {
-		publicURL = "http://103.181.143.73:" + cfg.App.Port
-	}
-	uploadHandler := handler.NewUploadHandler(publicURL)
+	uploadHandler := handler.NewUploadHandler()
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := router.New(authHandler, newsHandler, adminHandler, uploadHandler, &cfg.JWT)
@@ -99,4 +93,3 @@ func main() {
 	srv.Shutdown(ctx)
 	log.Println("server stopped")
 }
-

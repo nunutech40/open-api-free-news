@@ -29,9 +29,9 @@ type DatabaseConfig struct {
 }
 
 type JWTConfig struct {
-	Secret         string
-	AccessExpiry   time.Duration
-	RefreshExpiry  time.Duration
+	Secret        string
+	AccessExpiry  time.Duration
+	RefreshExpiry time.Duration
 }
 
 func Load() (*Config, error) {

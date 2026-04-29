@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 type userRepository struct {
 	db *sql.DB
 }
@@ -79,5 +78,3 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	)
 	return err
 }
-
-
