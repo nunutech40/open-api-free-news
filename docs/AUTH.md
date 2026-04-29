@@ -20,20 +20,31 @@
 
 ## 2. Email/Password Login — Internal Flow
 
-```text
-POST /auth/login { email, password }
-  │
-  ├── FindByEmail(email) → dapat user dari DB
-  │     └── tidak ketemu → return "invalid email or password"
-  │
-  ├── bcrypt.Compare(inputPassword, user.password_hash)
-  │     └── tidak cocok  → return "invalid email or password"
-  │
-  └── issueTokens(user)
-        ├── GenerateJWT({ userId, email, role }) → accessToken  (15m)
-        ├── GenerateJWT({ userId })              → refreshToken (7d)
-        ├── INSERT INTO tokens (user_id, access_token, refresh_token, ...)
-        └── return { accessToken, refreshToken, user }
+```mermaid
+sequenceDiagram
+    participant Client as Client (HP)
+    participant BE as Backend (Go)
+    participant DB as Database
+
+    Client->>BE: POST /auth/login {email, password}
+    BE->>DB: FindByEmail(email)
+    
+    alt User Tidak Ditemukan
+        DB-->>BE: null
+        BE-->>Client: 401 "invalid email or password"
+    else User Ditemukan
+        DB-->>BE: User data (password_hash)
+        BE->>BE: bcrypt.Compare(input, hash)
+        
+        alt Password Tidak Cocok
+            BE-->>Client: 401 "invalid email or password"
+        else Password Cocok
+            BE->>BE: Generate accessToken (15m)
+            BE->>BE: Generate refreshToken (7d)
+            BE->>DB: INSERT INTO tokens (...)
+            BE-->>Client: 200 { accessToken, refreshToken, user }
+        end
+    end
 ```
 
 ---
@@ -44,29 +55,42 @@ Perbedaan mendasar: **Google yang memverifikasi identitas**, bukan BE.
 `idToken` adalah "surat keterangan dari Google" yang berisi: *email, name, googleId*.
 BE memvalidasi surat ini ke server Google — tidak ada password yang dicek.
 
-```text
-POST /auth/oauth { provider: "google", id_token: "eyJ..." }
-  │
-  ├── Kirim idToken ke https://oauth2.googleapis.com/tokeninfo
-  │     ├── valid   → dapat { email, name, sub: googleId }
-  │     └── invalid → return 401 Unauthorized
-  │
-  ├── FindByGoogleID(googleId)
-  │     ├── Ketemu → issueTokens(user)          ← returning Google user
-  │     └── Tidak ketemu → FindByEmail(email)
-  │           ├── Ketemu (user lama pakai email)
-  │           │     └── UPDATE users SET google_id = googleId
-  │           │         link akun → issueTokens(user)
-  │           └── Tidak ketemu (user baru)
-  │                 └── INSERT users {
-  │                       name, email, google_id,
-  │                       password    = NULL,
-  │                       auth_provider = 'google'
-  │                     }
-  │                     issueTokens(newUser)
-  │
-  └── return { accessToken, refreshToken, user }
-      ← format IDENTIK dengan login biasa
+```mermaid
+flowchart TD
+    Start([POST /auth/oauth {provider, idToken}]) --> Verify[Kirim idToken ke Google API]
+    Verify --> IsValid{Token Valid?}
+    
+    %% Jika Invalid
+    IsValid -- "Tidak" --> Ret401([Return 401 Unauthorized])
+    
+    %% Jika Valid
+    IsValid -- "Ya" --> GetGoogleData[Dapat: email, name, googleId]
+    GetGoogleData --> FindGId[Cari di DB: FindByGoogleID]
+    FindGId --> FoundGId{Ketemu?}
+    
+    %% Returning Google User
+    FoundGId -- "Ya (User Lama Google)" --> IssueTokens[issueTokens: Generate JWT Pair]
+    
+    %% Fallback ke Email
+    FoundGId -- "Tidak" --> FindEmail[Cari di DB: FindByEmail]
+    FindEmail --> FoundEmail{Ketemu?}
+    
+    %% Account Linking
+    FoundEmail -- "Ya (User Lama Email)" --> LinkAcc[UPDATE users SET google_id = googleId]
+    LinkAcc --> IssueTokens
+    
+    %% Registrasi Baru
+    FoundEmail -- "Tidak (User Baru)" --> CreateUser[INSERT users<br>(password=NULL, auth_provider='google')]
+    CreateUser --> IssueTokens
+    
+    %% Sukses
+    IssueTokens --> Ret200([Return 200: {accessToken, refreshToken, user}])
+    
+    %% Styling
+    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
+    classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+    class Ret200 success;
+    class Ret401 error;
 ```
 
 > Setelah dapat `accessToken` dari BE, HP menyimpan dan menggunakannya
