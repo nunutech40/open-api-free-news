@@ -85,6 +85,38 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	util.OK(w, "login successful", resp)
 }
 
+// OAuthLogin godoc
+// @Summary      Social Login
+// @Description  Login with social provider using ID Token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body domain.OAuthLoginRequest true "OAuth Credentials"
+// @Success      200     {object} util.Response{data=domain.AuthResponse} "login successful"
+// @Failure      400     {object} util.Response
+// @Failure      401     {object} util.Response
+// @Router       /auth/oauth [post]
+func (h *AuthHandler) OAuthLogin(w http.ResponseWriter, r *http.Request) {
+	var req domain.OAuthLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		util.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if req.Provider == "" || req.IDToken == "" {
+		util.BadRequest(w, "provider and id_token are required")
+		return
+	}
+
+	resp, err := h.authSvc.OAuthLogin(r.Context(), &req)
+	if err != nil {
+		util.Unauthorized(w, err.Error())
+		return
+	}
+
+	util.OK(w, "login successful", resp)
+}
+
 // Logout godoc
 // @Summary      Logout user
 // @Description  Revoke refresh token

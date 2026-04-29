@@ -334,6 +334,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/oauth": {
+            "post": {
+                "description": "Login with social provider using ID Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Social Login",
+                "parameters": [
+                    {
+                        "description": "OAuth Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.OAuthLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "login successful",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/util.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/util.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/refresh": {
             "post": {
                 "description": "Get a new access and refresh token pair using an unexpired refresh token",
@@ -886,6 +944,26 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.OAuthLoginRequest": {
+            "type": "object",
+            "required": [
+                "id_token",
+                "provider"
+            ],
+            "properties": {
+                "id_token": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "google",
+                        "apple",
+                        "github"
+                    ]
+                }
+            }
+        },
         "domain.PaginationMeta": {
             "type": "object",
             "properties": {
@@ -964,6 +1042,9 @@ const docTemplate = `{
         "domain.User": {
             "type": "object",
             "properties": {
+                "auth_provider": {
+                    "type": "string"
+                },
                 "avatar_url": {
                     "type": "string"
                 },
@@ -974,6 +1055,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "google_id": {
                     "type": "string"
                 },
                 "id": {
