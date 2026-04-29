@@ -72,34 +72,34 @@ BE memvalidasi surat ini ke server Google — tidak ada password yang dicek.
 
 ```mermaid
 flowchart TD
-    Start(["POST /auth/oauth {provider, idToken}"]) --> Verify[Kirim idToken ke Google API]
-    Verify --> IsValid{Token Valid?}
+    Start(["POST /auth/oauth {provider, idToken}"]) --> Verify["Kirim idToken ke Google API"]
+    Verify --> IsValid{"Token Valid?"}
     
     %% Jika Invalid
-    IsValid -- "Tidak" --> Ret401([Return 401 Unauthorized])
+    IsValid -- "Tidak" --> Ret401(["Return 401 Unauthorized"])
     
     %% Jika Valid
-    IsValid -- "Ya" --> GetGoogleData[Dapat: email, name, googleId]
-    GetGoogleData --> FindGId[Cari di DB: FindByGoogleID]
-    FindGId --> FoundGId{Ketemu?}
+    IsValid -- "Ya" --> GetGoogleData["Dapat: email, name, googleId"]
+    GetGoogleData --> FindGId["Cari di DB: FindByGoogleID"]
+    FindGId --> FoundGId{"Ketemu?"}
     
     %% Returning Google User
-    FoundGId -- "Ya (User Lama Google)" --> IssueTokens[issueTokens: Generate JWT Pair]
+    FoundGId -- "Ya (User Lama Google)" --> IssueTokens["issueTokens: Generate JWT Pair"]
     
     %% Fallback ke Email
-    FoundGId -- "Tidak" --> FindEmail[Cari di DB: FindByEmail]
-    FindEmail --> FoundEmail{Ketemu?}
+    FoundGId -- "Tidak" --> FindEmail["Cari di DB: FindByEmail"]
+    FindEmail --> FoundEmail{"Ketemu?"}
     
     %% Account Linking
-    FoundEmail -- "Ya (User Lama Email)" --> LinkAcc[UPDATE users SET google_id = googleId]
+    FoundEmail -- "Ya (User Lama Email)" --> LinkAcc["UPDATE users SET google_id = googleId"]
     LinkAcc --> IssueTokens
     
     %% Registrasi Baru
-    FoundEmail -- "Tidak (User Baru)" --> CreateUser[INSERT users<br>(password=NULL, auth_provider='google')]
+    FoundEmail -- "Tidak (User Baru)" --> CreateUser["INSERT users<br>(password=NULL, auth_provider='google')"]
     CreateUser --> IssueTokens
     
     %% Sukses
-    IssueTokens --> Ret200([Return 200: {accessToken, refreshToken, user}])
+    IssueTokens --> Ret200(["Return 200: {accessToken, refreshToken, user}"])
     
     %% Styling
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
