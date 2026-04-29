@@ -16,6 +16,21 @@
 > Password di DB adalah **bcrypt hash**, bukan teks asli.
 > BE tidak pernah tahu password asli — hanya membandingkan hash.
 
+### Visualisasi Penyimpanan Token
+
+Setelah login sukses, token disimpan di dua tempat:
+
+**1. Di Database (Backend):** Tabel `tokens`
+| id | user_id | access_token | refresh_token | is_revoked | access_expiry |
+|----|---------|--------------|---------------|------------|---------------|
+| 1  | 10      | `eyJhbG...`  | `eyJhbG...`   | `false`    | `10:15:00`    |
+
+**2. Di SecureStorage (HP/Client):**
+| Key | Value |
+|-----|-------|
+| `access_token` | `eyJhbG...` |
+| `refresh_token` | `eyJhbG...` |
+
 ---
 
 ## 2. Email/Password Login — Internal Flow
@@ -57,7 +72,7 @@ BE memvalidasi surat ini ke server Google — tidak ada password yang dicek.
 
 ```mermaid
 flowchart TD
-    Start([POST /auth/oauth {provider, idToken}]) --> Verify[Kirim idToken ke Google API]
+    Start(["POST /auth/oauth {provider, idToken}"]) --> Verify[Kirim idToken ke Google API]
     Verify --> IsValid{Token Valid?}
     
     %% Jika Invalid
