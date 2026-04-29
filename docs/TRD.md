@@ -222,7 +222,7 @@ type NewsFeedQuery struct {
 
 #### `POST /auth/register`
 
-**Auth:** ❌ Public  
+**Auth:** 🔓 Public (No Auth)  
 **Request:**
 ```json
 { "name": "Nunu", "email": "nunu@mail.com", "password": "secret123" }
@@ -242,7 +242,7 @@ type NewsFeedQuery struct {
 
 #### `POST /auth/login`
 
-**Auth:** ❌ Public  
+**Auth:** 🔓 Public (No Auth)  
 **Request:**
 ```json
 { "email": "nunu@mail.com", "password": "secret123" }
@@ -251,7 +251,7 @@ type NewsFeedQuery struct {
 
 #### `POST /auth/refresh`
 
-**Auth:** ❌ Public (pakai refresh_token)  
+**Auth:** 🔓 Public — kirim refresh_token di body  
 **Request:**
 ```json
 { "refresh_token": "eyJ..." }
@@ -261,7 +261,7 @@ type NewsFeedQuery struct {
 
 #### `POST /auth/logout`
 
-**Auth:** ❌ Public (pakai refresh_token)  
+**Auth:** 🔓 Public — kirim refresh_token di body  
 **Request:**
 ```json
 { "refresh_token": "eyJ..." }
@@ -273,7 +273,7 @@ type NewsFeedQuery struct {
 
 #### `GET /auth/me`
 
-**Auth:** ✅ Bearer JWT  
+**Auth:** 🔒 Private (Bearer JWT)  
 **Response 200:**
 ```json
 {
@@ -294,7 +294,7 @@ type NewsFeedQuery struct {
 
 #### `PUT /auth/me`
 
-**Auth:** ✅ Bearer JWT  
+**Auth:** 🔒 Private (Bearer JWT)  
 **Request:**
 ```json
 { "name": "Nunu Updated", "bio": "Senior Flutter Dev", "phone": "0812", "avatar_url": "", "preferences": "" }
@@ -303,7 +303,7 @@ type NewsFeedQuery struct {
 
 #### `POST /auth/upload-avatar`
 
-**Auth:** ✅ Bearer JWT  
+**Auth:** 🔒 Private (Bearer JWT)  
 **Content-Type:** `multipart/form-data`  
 **Field:** `avatar` (file image)  
 **Response 200:**
@@ -313,7 +313,7 @@ type NewsFeedQuery struct {
 
 #### `POST /auth/oauth` *(Planned — Google Sign-In)*
 
-**Auth:** ❌ Public  
+**Auth:** 🔓 Public (No Auth)  
 **Request:**
 ```json
 { "provider": "google", "id_token": "eyJ..." }
@@ -334,7 +334,7 @@ type NewsFeedQuery struct {
 ### 4.1. `GET /categories`
 Mengembalikan semua kategori yang aktif.
 
-**Auth:** ❌ Tidak diperlukan  
+**Auth:** 🔓 Public (No Auth)  
 **Query Params:** Tidak ada
 
 **Response 200:**
@@ -363,7 +363,7 @@ Mengembalikan semua kategori yang aktif.
 ### 4.2. `GET /news`
 Mengembalikan feed berita terpaginasi.
 
-**Auth:** ❌ Tidak diperlukan  
+**Auth:** 🔓 Public (No Auth)  
 **Query Params:**
 
 | Param          | Tipe    | Default | Deskripsi                                         |
@@ -418,7 +418,7 @@ Mengembalikan feed berita terpaginasi.
 ### 4.3. `GET /news/:slug`
 Mengembalikan detail satu artikel.
 
-**Auth:** ❌ Tidak diperlukan
+**Auth:** 🔓 Public (No Auth Required)
 
 **Response 200:**
 ```json
@@ -453,7 +453,7 @@ Mengembalikan detail satu artikel.
 ### 4.4. `POST /admin/articles` *(Requires Admin Role)*
 Membuat artikel baru.
 
-**Auth:** ✅ Bearer JWT (role: `admin`)
+**Auth:** 🔒 Private (Bearer JWT + role: admin)
 
 **Request Body:**
 ```json
@@ -487,7 +487,7 @@ Membuat artikel baru.
 ### 4.5. `GET /me` *(Sudah Ada — Diperkuat)*
 Endpoint ini sudah exist dari iterasi Auth. Respons diperkaya dengan field `role`.
 
-**Auth:** ✅ Bearer JWT
+**Auth:** 🔒 Private (Bearer JWT Required)
 
 **Response 200:**
 ```json
