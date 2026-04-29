@@ -15,8 +15,9 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Port string
-	Env  string
+	Port           string
+	Env            string
+	GoogleClientID string
 }
 
 type DatabaseConfig struct {
@@ -49,8 +50,9 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		App: AppConfig{
-			Port: getEnv("APP_PORT", "8080"),
-			Env:  getEnv("APP_ENV", "development"),
+			Port:           getEnv("APP_PORT", "8080"),
+			Env:            getEnv("APP_ENV", "development"),
+			GoogleClientID: getEnv("GOOGLE_CLIENT_ID", ""),
 		},
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),

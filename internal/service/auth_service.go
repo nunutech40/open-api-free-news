@@ -15,17 +15,20 @@ type authService struct {
 	userRepo  domain.UserRepository
 	tokenRepo domain.TokenRepository
 	jwtCfg    *config.JWTConfig
+	appCfg    *config.AppConfig
 }
 
 func NewAuthService(
 	userRepo domain.UserRepository,
 	tokenRepo domain.TokenRepository,
 	jwtCfg *config.JWTConfig,
+	appCfg *config.AppConfig,
 ) domain.AuthService {
 	return &authService{
 		userRepo:  userRepo,
 		tokenRepo: tokenRepo,
 		jwtCfg:    jwtCfg,
+		appCfg:    appCfg,
 	}
 }
 
@@ -87,7 +90,7 @@ func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequ
 		return nil, errors.New("unsupported provider")
 	}
 
-	payload, err := idtoken.Validate(ctx, req.IDToken, "")
+	payload, err := idtoken.Validate(ctx, req.IDToken, s.appCfg.GoogleClientID)
 	if err != nil {
 		return nil, errors.New("invalid google token: " + err.Error())
 	}

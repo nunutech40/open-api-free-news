@@ -54,7 +54,7 @@ func main() {
 	articleRepo := repository.NewArticleRepository(db)
 
 	// ── Services ──────────────────────────────────────────────────────────────
-	authSvc := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
+	authSvc := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT, &cfg.App)
 	newsSvc := service.NewNewsService(categoryRepo, articleRepo)
 
 	// ── Handlers ──────────────────────────────────────────────────────────────
