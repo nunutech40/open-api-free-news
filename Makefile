@@ -31,6 +31,7 @@ deploy: build
 	ssh $(VPS) "mkdir -p $(DEPLOY_DIR)/migrations $(DEPLOY_DIR)/public/uploads && sudo systemctl stop $(APP_NAME) || true"
 	scp $(BINARY)           $(VPS):$(DEPLOY_DIR)/$(APP_NAME)
 	scp .env.example        $(VPS):$(DEPLOY_DIR)/.env.example
+	scp free-api-news-firebase.json $(VPS):$(DEPLOY_DIR)/free-api-news-firebase.json || true
 	scp -r migrations/*     $(VPS):$(DEPLOY_DIR)/migrations/
 	scp deploy/$(APP_NAME).service $(VPS):/tmp/$(APP_NAME).service
 	ssh $(VPS) "sudo mv /tmp/$(APP_NAME).service /etc/systemd/system/ && \
