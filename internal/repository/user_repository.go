@@ -40,10 +40,11 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) (*domain
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `SELECT id, name, email, password, role, auth_provider, google_id, avatar_url, bio, phone, preferences, created_at, updated_at FROM users WHERE email = $1`
 	user := &domain.User{}
+	var avatarURL, bio, phone, preferences sql.NullString
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID, &user.Name, &user.Email, &user.Password, &user.Role,
 		&user.AuthProvider, &user.GoogleID,
-		&user.AvatarURL, &user.Bio, &user.Phone, &user.Preferences,
+		&avatarURL, &bio, &phone, &preferences,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -52,16 +53,21 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 	if err != nil {
 		return nil, err
 	}
+	user.AvatarURL = avatarURL.String
+	user.Bio = bio.String
+	user.Phone = phone.String
+	user.Preferences = preferences.String
 	return user, nil
 }
 
 func (r *userRepository) FindByID(ctx context.Context, id int64) (*domain.User, error) {
 	query := `SELECT id, name, email, role, auth_provider, google_id, avatar_url, bio, phone, preferences, created_at, updated_at FROM users WHERE id = $1`
 	user := &domain.User{}
+	var avatarURL, bio, phone, preferences sql.NullString
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Name, &user.Email, &user.Role,
 		&user.AuthProvider, &user.GoogleID,
-		&user.AvatarURL, &user.Bio, &user.Phone, &user.Preferences,
+		&avatarURL, &bio, &phone, &preferences,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -70,16 +76,21 @@ func (r *userRepository) FindByID(ctx context.Context, id int64) (*domain.User, 
 	if err != nil {
 		return nil, err
 	}
+	user.AvatarURL = avatarURL.String
+	user.Bio = bio.String
+	user.Phone = phone.String
+	user.Preferences = preferences.String
 	return user, nil
 }
 
 func (r *userRepository) FindByGoogleID(ctx context.Context, googleID string) (*domain.User, error) {
 	query := `SELECT id, name, email, role, auth_provider, google_id, avatar_url, bio, phone, preferences, created_at, updated_at FROM users WHERE google_id = $1`
 	user := &domain.User{}
+	var avatarURL, bio, phone, preferences sql.NullString
 	err := r.db.QueryRowContext(ctx, query, googleID).Scan(
 		&user.ID, &user.Name, &user.Email, &user.Role,
 		&user.AuthProvider, &user.GoogleID,
-		&user.AvatarURL, &user.Bio, &user.Phone, &user.Preferences,
+		&avatarURL, &bio, &phone, &preferences,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -88,6 +99,10 @@ func (r *userRepository) FindByGoogleID(ctx context.Context, googleID string) (*
 	if err != nil {
 		return nil, err
 	}
+	user.AvatarURL = avatarURL.String
+	user.Bio = bio.String
+	user.Phone = phone.String
+	user.Preferences = preferences.String
 	return user, nil
 }
 
@@ -112,10 +127,11 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 func (r *userRepository) FindByPhone(ctx context.Context, phone string) (*domain.User, error) {
 	query := `SELECT id, name, email, role, auth_provider, google_id, avatar_url, bio, phone, preferences, created_at, updated_at FROM users WHERE phone = $1`
 	user := &domain.User{}
+	var avatarURL, bio, phoneRecord, preferences sql.NullString
 	err := r.db.QueryRowContext(ctx, query, phone).Scan(
 		&user.ID, &user.Name, &user.Email, &user.Role,
 		&user.AuthProvider, &user.GoogleID,
-		&user.AvatarURL, &user.Bio, &user.Phone, &user.Preferences,
+		&avatarURL, &bio, &phoneRecord, &preferences,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -124,6 +140,10 @@ func (r *userRepository) FindByPhone(ctx context.Context, phone string) (*domain
 	if err != nil {
 		return nil, err
 	}
+	user.AvatarURL = avatarURL.String
+	user.Bio = bio.String
+	user.Phone = phoneRecord.String
+	user.Preferences = preferences.String
 	return user, nil
 }
 
