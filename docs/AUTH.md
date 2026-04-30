@@ -284,3 +284,18 @@ flowchart TD
     class Ret401,Ret404 error;
 ```
 
+### 5.4. Bagaimana Backend Go Memverifikasi Token Firebase?
+
+Salah satu pertanyaan kritis adalah: *"Jika Backend Go tidak pernah menyimpan `firebase_id_token` dari OTP di database, bagaimana cara Go mencocokkannya?"*
+
+Jawabannya adalah: **Go tidak mencocokkan token, melainkan memverifikasi Tanda Tangan Kriptografi (Digital Signature).**
+
+`idToken` Firebase adalah sebuah JWT (JSON Web Token) yang dibentuk oleh konsep Kriptografi Asimetris.
+1. **Firebase Membuat Surat:** Setelah user memasukkan OTP yang benar di aplikasi Flutter, Firebase membuatkan `idToken` (surat keterangan) yang berisi nomor HP user.
+2. **Stempel Emas (Private Key):** Firebase memberikan "stempel emas" pada surat tersebut menggunakan *Private Key* yang hanya dimiliki oleh Google.
+3. **Go Mengecek Keaslian (Public Key):** Aplikasi Flutter mengirim surat ini ke Backend Go. Menggunakan **Firebase Admin SDK**, Backend Go men-download buku panduan *Public Key* milik Google dari internet. Go secara matematis mengecek apakah "stempel emas" di surat tersebut benar-benar dicetak oleh Google dan belum kedaluwarsa.
+4. **Ekstrak Nomor HP:** Jika stempelnya terbukti asli (Valid), Go akan mengambil informasi nomor HP dari dalam surat tersebut (misal: `+628111111111`). Surat/token tersebut kemudian dibuang.
+5. **Pencarian Database:** Langkah terakhir, Backend Go mencari di tabel `users` miliknya sendiri: `SELECT * FROM users WHERE phone = '+628111111111'`. Jika user ditemukan, password-nya akan diubah.
+
+Dengan arsitektur ini, Backend Go tidak perlu repot menyimpan kode OTP atau token verifikasi. Semua beban verifikasi OTP (pengiriman SMS dan validasi kode angka) di-*outsource* sepenuhnya ke infrastruktur Firebase.
+
