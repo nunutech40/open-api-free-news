@@ -82,6 +82,17 @@ definitions:
       title:
         type: string
     type: object
+  domain.ForgotPasswordRequest:
+    properties:
+      firebase_id_token:
+        type: string
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - firebase_id_token
+    - new_password
+    type: object
   domain.LoginRequest:
     properties:
       email:
@@ -439,6 +450,44 @@ paths:
           schema:
             $ref: '#/definitions/util.Response'
       summary: Social Login
+      tags:
+      - auth
+  /auth/password/forgot:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using Firebase Phone Auth ID Token
+      parameters:
+      - description: Forgot Password Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            $ref: '#/definitions/util.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/util.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: Forgot Password
       tags:
       - auth
   /auth/refresh:
