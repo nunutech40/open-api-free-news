@@ -1,4 +1,7 @@
 .env
+# Firebase Credentials
+free-api-news-firebase.json
+*-firebase.json
 *.exe
 *.test
 vendor/
