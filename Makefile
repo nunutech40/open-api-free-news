@@ -46,7 +46,9 @@ deploy-migrate:
 	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/003_create_categories_table.sql && \
 	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/004_create_articles_table.sql && \
 	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/005_add_role_to_users.sql && \
-	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/009_add_profile_fields.sql"
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/009_add_profile_fields.sql && \
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/011_add_oauth_support.sql && \
+	            sudo -u postgres psql -d free_api_news -f $(DEPLOY_DIR)/migrations/012_make_phone_unique_for_otp.sql"
 
 logs:
 	ssh $(VPS) "sudo journalctl -u $(APP_NAME) -f"

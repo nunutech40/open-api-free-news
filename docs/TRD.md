@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS users (
     role        VARCHAR(20)              NOT NULL DEFAULT 'user',  -- 'user' | 'admin'
     avatar_url  VARCHAR(255)             DEFAULT '',
     bio         TEXT                     DEFAULT '',
-    phone       VARCHAR(50)              DEFAULT '',
+    phone       VARCHAR(50)              UNIQUE DEFAULT NULL,
     preferences JSONB                    DEFAULT '{}'::jsonb
 );
 
