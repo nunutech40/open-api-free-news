@@ -8,8 +8,10 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	FindByID(ctx context.Context, id int64) (*User, error)
 	FindByGoogleID(ctx context.Context, googleID string) (*User, error)
+	FindByPhone(ctx context.Context, phone string) (*User, error)
 	LinkGoogleID(ctx context.Context, userID int64, googleID string) error
 	Update(ctx context.Context, user *User) error
+	UpdatePasswordByPhone(ctx context.Context, phone, hashedPassword string) error
 }
 
 // TokenRepository defines data access for tokens
@@ -30,6 +32,7 @@ type AuthService interface {
 	RefreshToken(ctx context.Context, req *RefreshRequest) (*AuthResponse, error)
 	GetProfile(ctx context.Context, userID int64) (*User, error)
 	UpdateProfile(ctx context.Context, userID int64, req *UpdateProfileRequest) (*User, error)
+	ResetPasswordForgot(ctx context.Context, req *ForgotPasswordRequest) error
 }
 
 // CategoryRepository defines data access for news categories

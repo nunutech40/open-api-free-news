@@ -8,6 +8,7 @@ import (
 	"free-api-news/internal/util"
 	"time"
 
+	"firebase.google.com/go/v4/auth"
 	"google.golang.org/api/idtoken"
 )
 
@@ -16,6 +17,7 @@ type authService struct {
 	tokenRepo domain.TokenRepository
 	jwtCfg    *config.JWTConfig
 	appCfg    *config.AppConfig
+	fbAuth    *auth.Client
 }
 
 func NewAuthService(
@@ -23,12 +25,14 @@ func NewAuthService(
 	tokenRepo domain.TokenRepository,
 	jwtCfg *config.JWTConfig,
 	appCfg *config.AppConfig,
+	fbAuth *auth.Client,
 ) domain.AuthService {
 	return &authService{
 		userRepo:  userRepo,
 		tokenRepo: tokenRepo,
 		jwtCfg:    jwtCfg,
 		appCfg:    appCfg,
+		fbAuth:    fbAuth,
 	}
 }
 
@@ -203,6 +207,51 @@ func (s *authService) UpdateProfile(ctx context.Context, userID int64, req *doma
 	}
 
 	return user, nil
+}
+
+func (s *authService) ResetPasswordForgot(ctx context.Context, req *domain.ForgotPasswordRequest) error {
+	// 1. Verify Firebase ID Token
+	if s.fbAuth == nil {
+		return errors.New("firebase auth is not initialized on the server")
+	}
+
+	token, err := s.fbAuth.VerifyIDToken(ctx, req.FirebaseIDToken)
+	if err != nil {
+		return errors.New("invalid or expired firebase token: " + err.Error())
+	}
+
+	// 2. Extract phone number
+	phoneInfo, ok := token.Claims["phone_number"]
+	if !ok {
+		return errors.New("firebase token does not contain a verified phone number")
+	}
+	phone := phoneInfo.(string)
+
+	// 3. Find user by phone
+	user, err := s.userRepo.FindByPhone(ctx, phone)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errors.New("user with this phone number not found")
+	}
+
+	// 4. Hash new password
+	hashed, err := util.HashPassword(req.NewPassword)
+	if err != nil {
+		return err
+	}
+
+	// 5. Update DB
+	err = s.userRepo.UpdatePasswordByPhone(ctx, phone, hashed)
+	if err != nil {
+		return err
+	}
+
+	// 6. Security: Revoke all existing sessions so the user has to login with the new password
+	_ = s.tokenRepo.RevokeByUserID(ctx, user.ID)
+
+	return nil
 }
 
 // issueTokens generates a new token pair and persists it

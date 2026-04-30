@@ -239,3 +239,45 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	util.OK(w, "profile updated successfully", user)
 }
+
+// ForgotPassword godoc
+// @Summary      Forgot Password
+// @Description  Reset password using Firebase Phone Auth ID Token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body domain.ForgotPasswordRequest true "Forgot Password Data"
+// @Success      200     {object} util.Response "Password changed successfully"
+// @Failure      400     {object} util.Response
+// @Failure      401     {object} util.Response
+// @Failure      404     {object} util.Response
+// @Failure      500     {object} util.Response
+// @Router       /auth/password/forgot [post]
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req domain.ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		util.BadRequest(w, "invalid request body")
+		return
+	}
+
+	if req.FirebaseIDToken == "" || req.NewPassword == "" {
+		util.BadRequest(w, "firebase_id_token and new_password are required")
+		return
+	}
+
+	err := h.authSvc.ResetPasswordForgot(r.Context(), &req)
+	if err != nil {
+		if err.Error() == "user with this phone number not found" {
+			util.NotFound(w, err.Error())
+			return
+		}
+		if err.Error() == "firebase auth is not initialized on the server" {
+			util.InternalError(w, err.Error())
+			return
+		}
+		util.Unauthorized(w, err.Error())
+		return
+	}
+
+	util.OK(w, "Password changed successfully", nil)
+}

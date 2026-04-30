@@ -71,3 +71,9 @@ type UpdateProfileRequest struct {
 	Phone       string `json:"phone"`
 	Preferences string `json:"preferences"`
 }
+
+// ForgotPasswordRequest is the input for resetting password via Firebase OTP
+type ForgotPasswordRequest struct {
+	FirebaseIDToken string `json:"firebase_id_token" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required,min=8"`
+}

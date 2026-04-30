@@ -4,6 +4,7 @@ import (
 	"context"
 	"free-api-news/internal/config"
 	"free-api-news/internal/database"
+	"free-api-news/internal/firebase"
 	"free-api-news/internal/handler"
 	"free-api-news/internal/repository"
 	"free-api-news/internal/router"
@@ -53,8 +54,14 @@ func main() {
 	categoryRepo := repository.NewCategoryRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
 
+	// ── Firebase ──────────────────────────────────────────────────────────────
+	fbAuth, err := firebase.InitAuth(context.Background())
+	if err != nil {
+		log.Printf("⚠️ Firebase Auth failed to initialize: %v", err)
+	}
+
 	// ── Services ──────────────────────────────────────────────────────────────
-	authSvc := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT, &cfg.App)
+	authSvc := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT, &cfg.App, fbAuth)
 	newsSvc := service.NewNewsService(categoryRepo, articleRepo)
 
 	// ── Handlers ──────────────────────────────────────────────────────────────

@@ -109,3 +109,39 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	return err
 }
 
+func (r *userRepository) FindByPhone(ctx context.Context, phone string) (*domain.User, error) {
+	query := `SELECT id, name, email, role, auth_provider, google_id, avatar_url, bio, phone, preferences, created_at, updated_at FROM users WHERE phone = $1`
+	user := &domain.User{}
+	err := r.db.QueryRowContext(ctx, query, phone).Scan(
+		&user.ID, &user.Name, &user.Email, &user.Role,
+		&user.AuthProvider, &user.GoogleID,
+		&user.AvatarURL, &user.Bio, &user.Phone, &user.Preferences,
+		&user.CreatedAt, &user.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (r *userRepository) UpdatePasswordByPhone(ctx context.Context, phone, hashedPassword string) error {
+	query := `UPDATE users SET password = $1, updated_at = $2 WHERE phone = $3`
+	result, err := r.db.ExecContext(ctx, query, hashedPassword, time.Now(), phone)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+

@@ -40,6 +40,7 @@ func New(
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/v1/auth/oauth", authHandler.OAuthLogin)
 	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.RefreshToken)
+	mux.HandleFunc("POST /api/v1/auth/password/forgot", authHandler.ForgotPassword)
 
 	// ── Auth (protected) ──────────────────────────────────────────────────────
 	mux.Handle("POST /api/v1/auth/logout", authMid(http.HandlerFunc(authHandler.Logout)))
