@@ -216,9 +216,9 @@ CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
 
 ---
 
-## 5. Ubah Password (Reset Password) via Firebase OTP
+## 5. Lupa Password (Forgot Password) via Firebase OTP
 
-Fitur ini mengizinkan pengguna untuk mengubah password dengan melakukan verifikasi nomor HP menggunakan **Firebase Phone Auth** (OTP SMS). Ini adalah pendelegasian proses pengiriman SMS ke infrastruktur Firebase, sehingga Backend Go tidak perlu membayar atau mengelola API SMS Gateway.
+Fitur ini mengizinkan pengguna yang tidak bisa login (lupa password) untuk mereset password mereka dengan melakukan verifikasi nomor HP menggunakan **Firebase Phone Auth** (OTP SMS). Ini adalah API Public (tanpa Bearer Token) karena user dalam kondisi belum login.
 
 ### 5.1. Syarat Infrastruktur
 - Menggunakan **Firebase Admin SDK** di Backend Go (`firebase.google.com/go/v4`).
@@ -239,7 +239,7 @@ sequenceDiagram
     FB-->>App: Return `firebase_id_token`
     
     Note over App, BE: App kirim token Firebase ke BE untuk dipastikan keasliannya
-    App->>BE: POST /auth/password/reset {firebase_id_token, new_password}
+    App->>BE: POST /auth/password/forgot {firebase_id_token, new_password}
     BE->>FB: Verifikasi `firebase_id_token` (Admin SDK)
     
     alt Token Invalid / Expired
@@ -263,7 +263,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Start(["POST /auth/password/reset {firebase_token, new_pass}"]) --> VerifyToken["Verifikasi token ke Firebase"]
+    Start(["POST /auth/password/forgot {firebase_token, new_pass}"]) --> VerifyToken["Verifikasi token ke Firebase"]
     VerifyToken --> IsTokenValid{"Valid?"}
     
     IsTokenValid -- "Tidak" --> Ret401(["Return 401: Invalid Firebase Token"])
