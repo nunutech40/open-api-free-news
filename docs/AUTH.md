@@ -214,3 +214,73 @@ CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
 | `google_id` | VARCHAR(255) UNIQUE NULL | `sub` dari Google idToken |
 | `auth_provider` | VARCHAR(20) DEFAULT 'local' | `local` / `google` / `apple` / `github` |
 
+---
+
+## 5. Ubah Password (Reset Password) via Firebase OTP
+
+Fitur ini mengizinkan pengguna untuk mengubah password dengan melakukan verifikasi nomor HP menggunakan **Firebase Phone Auth** (OTP SMS). Ini adalah pendelegasian proses pengiriman SMS ke infrastruktur Firebase, sehingga Backend Go tidak perlu membayar atau mengelola API SMS Gateway.
+
+### 5.1. Syarat Infrastruktur
+- Menggunakan **Firebase Admin SDK** di Backend Go (`firebase.google.com/go/v4`).
+- Tabel `users` wajib memiliki kolom `phone` yang terisi dengan format E.164 (contoh: `+628111111111`).
+
+### 5.2. Sequence Diagram (Interaksi Komponen)
+
+```mermaid
+sequenceDiagram
+    participant App as Aplikasi Flutter
+    participant FB as Firebase Server
+    participant BE as Backend (Go)
+    participant DB as Database
+
+    App->>FB: Request OTP SMS ke Nomor HP
+    FB-->>App: SMS Terkirim
+    App->>FB: Verifikasi kode OTP
+    FB-->>App: Return `firebase_id_token`
+    
+    Note over App, BE: App kirim token Firebase ke BE untuk dipastikan keasliannya
+    App->>BE: POST /auth/password/reset {firebase_id_token, new_password}
+    BE->>FB: Verifikasi `firebase_id_token` (Admin SDK)
+    
+    alt Token Invalid / Expired
+        FB-->>BE: Error
+        BE-->>App: 401 Unauthorized
+    else Token Valid
+        FB-->>BE: Data Token {phone_number}
+        BE->>DB: Cari User (FindUserByPhone)
+        
+        alt Nomor HP Belum Terdaftar
+            BE-->>App: 404 User Not Found
+        else Nomor HP Ditemukan
+            BE->>BE: Hash `new_password` dengan bcrypt
+            BE->>DB: UPDATE users SET password = hash WHERE phone = phone_number
+            BE-->>App: 200 Password Changed Successfully
+        end
+    end
+```
+
+### 5.3. Flowchart Logic
+
+```mermaid
+flowchart TD
+    Start(["POST /auth/password/reset {firebase_token, new_pass}"]) --> VerifyToken["Verifikasi token ke Firebase"]
+    VerifyToken --> IsTokenValid{"Valid?"}
+    
+    IsTokenValid -- "Tidak" --> Ret401(["Return 401: Invalid Firebase Token"])
+    IsTokenValid -- "Ya" --> GetPhone["Dapat phone_number (+62...)"]
+    
+    GetPhone --> FindDB["Cari di DB: FindByPhone"]
+    FindDB --> IsFound{"Ketemu?"}
+    
+    IsFound -- "Tidak" --> Ret404(["Return 404: User Not Found"])
+    IsFound -- "Ya" --> HashPass["Hash new_pass (bcrypt)"]
+    
+    HashPass --> UpdateDB["UPDATE users SET password = hash"]
+    UpdateDB --> Ret200(["Return 200: Success"])
+    
+    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
+    classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+    class Ret200 success;
+    class Ret401,Ret404 error;
+```
+
