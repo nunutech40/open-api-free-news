@@ -94,45 +94,40 @@ flowchart TD
 
 ---
 
-## 3. Google Sign-In — Internal Flow (Planned)
+## 3. Unified Firebase Social Login — Internal Flow (Google, GitHub, Twitter)
 
-Perbedaan mendasar: **Google yang memverifikasi identitas**, bukan BE.
-`idToken` adalah "surat keterangan dari Google" yang berisi: *email, name, googleId*.
-BE memvalidasi surat ini ke server Google — tidak ada password yang dicek.
+Perbedaan mendasar: **Firebase yang memverifikasi identitas**, bukan BE secara manual.
+`idToken` yang dikirim dari Flutter adalah `Firebase ID Token`, yaitu JWT (JSON Web Token) yang ditandatangani oleh Firebase.
+BE memvalidasi token ini menggunakan Firebase Admin SDK — tidak ada password atau token raw dari masing-masing provider (Google/GitHub/X) yang dicek secara langsung oleh BE.
 
 ### 3.1. Sequence Diagram (Interaksi Komponen)
 ```mermaid
 sequenceDiagram
     participant App as Aplikasi Flutter
-    participant OS as OS / Google SDK
-    participant Google as Google Server
+    participant FB as Firebase Auth SDK / Webview
     participant BE as Backend (Go)
     participant DB as Database
 
-    App->>OS: Panggil signIn()
-    OS->>OS: Munculkan Popup Akun Google
-    OS->>Google: User pilih akun, OS verifikasi
-    Google-->>OS: Return `idToken`
-    OS-->>App: Serahkan `idToken` ke Aplikasi
+    App->>FB: Login via Provider (Google/GitHub/X)
+    FB-->>App: Return `firebase_id_token`
     
-    Note over App, BE: App TIDAK tahu password/email.<br/>Hanya kirim idToken!
-    App->>BE: POST /auth/oauth {provider, idToken}
-    BE->>Google: Verifikasi idToken ke OAuth API
+    Note over App, BE: App TIDAK kirim token mentah provider.<br/>Hanya kirim token Firebase!
+    App->>BE: POST /auth/oauth {provider, idToken: firebase_id_token}
+    BE->>BE: fbAuth.VerifyIDToken() (Firebase Admin SDK)
     
     alt Token Invalid / Expired
-        Google-->>BE: Error
         BE-->>App: 401 Unauthorized
     else Token Valid
-        Google-->>BE: Data {email, name, googleId}
-        BE->>DB: Cari User (by googleId atau email)
+        BE->>BE: Ekstrak Data {email, name, firebase_uid}
+        BE->>DB: Cari User (by firebase_uid atau email)
         
         alt User Belum Ada
-            BE->>DB: INSERT user baru (password=NULL)
+            BE->>DB: INSERT user baru (password=NULL, firebase_uid)
         else User Sudah Ada
-            BE->>DB: UPDATE google_id (Account Linking)
+            BE->>DB: UPDATE firebase_uid (Account Linking)
         end
         
-        BE->>BE: Generate accessToken & refreshToken
+        BE->>BE: Generate accessToken & refreshToken (JWT Internal BE)
         BE->>DB: INSERT INTO tokens (...)
         BE-->>App: 200 { accessToken, refreshToken, user }
     end
@@ -141,30 +136,30 @@ sequenceDiagram
 ### 3.2. Flowchart Logic (Logika Percabangan)
 ```mermaid
 flowchart TD
-    Start(["POST /auth/oauth {provider, idToken}"]) --> Verify["Kirim idToken ke Google API"]
+    Start(["POST /auth/oauth {provider, firebaseToken}"]) --> Verify["VerifyIDToken (Firebase Admin SDK)"]
     Verify --> IsValid{"Token Valid?"}
     
     %% Jika Invalid
     IsValid -- "Tidak" --> Ret401(["Return 401 Unauthorized"])
     
     %% Jika Valid
-    IsValid -- "Ya" --> GetGoogleData["Dapat: email, name, googleId"]
-    GetGoogleData --> FindGId["Cari di DB: FindByGoogleID"]
-    FindGId --> FoundGId{"Ketemu?"}
+    IsValid -- "Ya" --> GetData["Dapat: email, name, firebase_uid"]
+    GetData --> FindFB["Cari di DB: FindByFirebaseUID"]
+    FindFB --> FoundFB{"Ketemu?"}
     
-    %% Returning Google User
-    FoundGId -- "Ya (User Lama Google)" --> IssueTokens["issueTokens: Generate JWT Pair"]
+    %% Returning User
+    FoundFB -- "Ya (User Lama)" --> IssueTokens["issueTokens: Generate JWT Pair"]
     
     %% Fallback ke Email
-    FoundGId -- "Tidak" --> FindEmail["Cari di DB: FindByEmail"]
+    FoundFB -- "Tidak" --> FindEmail["Cari di DB: FindByEmail"]
     FindEmail --> FoundEmail{"Ketemu?"}
     
     %% Account Linking
-    FoundEmail -- "Ya (User Lama Email)" --> LinkAcc["UPDATE users SET google_id = googleId"]
+    FoundEmail -- "Ya (Email Ada)" --> LinkAcc["UPDATE users SET firebase_uid = firebase_uid"]
     LinkAcc --> IssueTokens
     
     %% Registrasi Baru
-    FoundEmail -- "Tidak (User Baru)" --> CreateUser["INSERT users<br>(password=NULL, auth_provider='google')"]
+    FoundEmail -- "Tidak (Baru)" --> CreateUser["INSERT users<br>(password=NULL, firebase_uid)"]
     CreateUser --> IssueTokens
     
     %% Sukses
@@ -177,42 +172,35 @@ flowchart TD
     class Ret401 error;
 ```
 
-> Setelah dapat `accessToken` dari BE, HP menyimpan dan menggunakannya
+> Setelah dapat `accessToken` internal dari BE, HP menyimpan dan menggunakannya
 > **persis sama** seperti login email/password. Client tidak perlu tahu
 > user login via metode apa — semuanya transparan.
 
 ---
 
-## 4. DB Migration untuk Google Sign-In
+## 4. DB Migration untuk Unified Firebase Social Login
 
 ```sql
--- Migration: 011_add_oauth_support.sql
+-- Migration: 011_add_oauth_support.sql (Versi Awal)
+-- ... [Disembunyikan untuk keringkasan] ...
 
--- 1. password jadi nullable (Google user tidak punya password)
-ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
-ALTER TABLE users ALTER COLUMN password SET DEFAULT NULL;
+-- Migration: 012_add_firebase_uid.sql (Versi Unified)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255) UNIQUE DEFAULT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users (firebase_uid);
 
--- 2. simpan Google ID untuk lookup returning user
-ALTER TABLE users ADD COLUMN IF NOT EXISTS
-    google_id VARCHAR(255) UNIQUE DEFAULT NULL;
-
--- 3. track metode registrasi
-ALTER TABLE users ADD COLUMN IF NOT EXISTS
-    auth_provider VARCHAR(20) NOT NULL DEFAULT 'local';
-
+-- Update constraint untuk mendukung twitter
+ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_auth_provider;
 ALTER TABLE users ADD CONSTRAINT chk_auth_provider
-    CHECK (auth_provider IN ('local', 'google', 'apple', 'github'));
-
-CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
+    CHECK (auth_provider IN ('local', 'google', 'apple', 'github', 'twitter'));
 ```
 
-**Kolom baru di tabel `users`:**
+**Kolom relevan di tabel `users`:**
 
 | Kolom | Tipe | Keterangan |
 |-------|------|------------|
 | `password` | TEXT **NULL** | Diubah dari NOT NULL — NULL untuk social user |
-| `google_id` | VARCHAR(255) UNIQUE NULL | `sub` dari Google idToken |
-| `auth_provider` | VARCHAR(20) DEFAULT 'local' | `local` / `google` / `apple` / `github` |
+| `firebase_uid` | VARCHAR(255) UNIQUE NULL | `uid` dari Firebase Admin SDK |
+| `auth_provider` | VARCHAR(20) DEFAULT 'local' | `local` / `google` / `apple` / `github` / `twitter` |
 
 ---
 

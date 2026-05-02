@@ -90,47 +90,57 @@ func (s *authService) Logout(ctx context.Context, refreshToken string) error {
 }
 
 func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequest) (*domain.AuthResponse, error) {
-	if req.Provider != "google" {
-		return nil, errors.New("unsupported provider")
+	// 1. Verify the unified Firebase ID Token
+	if s.fbAuth == nil {
+		return nil, errors.New("firebase auth is not initialized on the server")
 	}
 
-	// Use "" to skip exact audience validation here, because iOS tokens have the iOS Client ID as Audience, 
-	// while Android/Web tokens have the Web Client ID. We just trust the Google signature for now.
-	payload, err := idtoken.Validate(ctx, req.IDToken, "")
+	token, err := s.fbAuth.VerifyIDToken(ctx, req.IDToken)
 	if err != nil {
-		return nil, errors.New("invalid google token: " + err.Error())
+		return nil, errors.New("invalid or expired firebase token: " + err.Error())
 	}
 
-	email, ok := payload.Claims["email"].(string)
-	if !ok {
-		return nil, errors.New("email not found in token claims")
+	// 2. Extract standard claims from Firebase token
+	firebaseUID := token.UID
+	email, ok := token.Claims["email"].(string)
+	if !ok || email == "" {
+		// Some providers (like Twitter/GitHub) might not provide an email if the user hides it.
+		// However, Firebase Auth usually handles this gracefully depending on console settings.
+		return nil, errors.New("email not found in firebase token claims")
 	}
-	name, _ := payload.Claims["name"].(string)
-	googleID := payload.Subject
+	
+	name, _ := token.Claims["name"].(string)
+	if name == "" {
+		name = "Firebase User"
+	}
 
-	user, err := s.userRepo.FindByGoogleID(ctx, googleID)
+	// 3. Find user by Firebase UID
+	user, err := s.userRepo.FindByFirebaseUID(ctx, firebaseUID)
 	if err != nil {
 		return nil, err
 	}
 
 	if user == nil {
+		// Fallback: check if a user with this email already exists
 		userByEmail, err := s.userRepo.FindByEmail(ctx, email)
 		if err != nil {
 			return nil, err
 		}
 
 		if userByEmail != nil {
-			if err := s.userRepo.LinkGoogleID(ctx, userByEmail.ID, googleID); err != nil {
+			// Account linking: User exists with this email, so just link the FirebaseUID
+			if err := s.userRepo.LinkFirebaseUID(ctx, userByEmail.ID, firebaseUID); err != nil {
 				return nil, err
 			}
 			user = userByEmail
-			user.GoogleID = &googleID
+			user.FirebaseUID = &firebaseUID
 		} else {
+			// Create brand new user
 			newUser := &domain.User{
 				Name:         name,
 				Email:        email,
-				AuthProvider: "google",
-				GoogleID:     &googleID,
+				AuthProvider: req.Provider, // "google", "github", "twitter"
+				FirebaseUID:  &firebaseUID,
 			}
 			
 			createdUser, err := s.userRepo.Create(ctx, newUser)
@@ -141,6 +151,7 @@ func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequ
 		}
 	}
 
+	// 4. Issue Backend API Tokens
 	return s.issueTokens(ctx, user)
 }
 

@@ -11,6 +11,7 @@ type User struct {
 	Role         string    `json:"role"`
 	AuthProvider string    `json:"auth_provider"`
 	GoogleID     *string   `json:"google_id,omitempty"`
+	FirebaseUID  *string   `json:"firebase_uid,omitempty"`
 	AvatarURL    string    `json:"avatar_url"`
 	Bio          string    `json:"bio"`
 	Phone        string    `json:"phone"`
@@ -44,10 +45,10 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
-// OAuthLoginRequest is the input for social sign-in
+// OAuthLoginRequest is the input for unified social sign-in via Firebase
 type OAuthLoginRequest struct {
-	Provider string `json:"provider" validate:"required,oneof=google apple github"`
-	IDToken  string `json:"id_token" validate:"required"`
+	Provider string `json:"provider" validate:"required,oneof=google apple github twitter"`
+	IDToken  string `json:"id_token" validate:"required"` // Merupakan Firebase ID Token
 }
 
 // AuthResponse is returned after a successful register/login

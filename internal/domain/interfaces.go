@@ -8,8 +8,10 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	FindByID(ctx context.Context, id int64) (*User, error)
 	FindByGoogleID(ctx context.Context, googleID string) (*User, error)
+	FindByFirebaseUID(ctx context.Context, firebaseUID string) (*User, error)
 	FindByPhone(ctx context.Context, phone string) (*User, error)
 	LinkGoogleID(ctx context.Context, userID int64, googleID string) error
+	LinkFirebaseUID(ctx context.Context, userID int64, firebaseUID string) error
 	Update(ctx context.Context, user *User) error
 	UpdatePasswordByPhone(ctx context.Context, phone, hashedPassword string) error
 }
