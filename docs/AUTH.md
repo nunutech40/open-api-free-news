@@ -184,7 +184,7 @@ flowchart TD
 -- Migration: 011_add_oauth_support.sql (Versi Awal)
 -- ... [Disembunyikan untuk keringkasan] ...
 
--- Migration: 012_add_firebase_uid.sql (Versi Unified)
+-- Migration: 013_add_firebase_uid.sql (Versi Unified)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255) UNIQUE DEFAULT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users (firebase_uid);
 

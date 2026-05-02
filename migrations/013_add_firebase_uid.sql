@@ -1,4 +1,4 @@
--- Migration: 012_add_firebase_uid.sql
+-- Migration: 013_add_firebase_uid.sql
 
 -- 1. Tambahkan kolom firebase_uid untuk Unified Firebase Social Login
 ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255) UNIQUE DEFAULT NULL;
