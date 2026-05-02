@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"firebase.google.com/go/v4/auth"
-	"google.golang.org/api/idtoken"
 )
 
 type authService struct {
