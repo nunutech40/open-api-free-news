@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"firebase.google.com/go/v4/auth"
+	"google.golang.org/api/idtoken"
 )
 
 type authService struct {
@@ -89,32 +90,56 @@ func (s *authService) Logout(ctx context.Context, refreshToken string) error {
 }
 
 func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequest) (*domain.AuthResponse, error) {
-	// 1. Verify the unified Firebase ID Token
-	if s.fbAuth == nil {
-		return nil, errors.New("firebase auth is not initialized on the server")
+	var email, name, providerID string
+
+	if req.Provider == "google" {
+		// 1a. Verify raw Google token (Portfolio specific)
+		payload, err := idtoken.Validate(ctx, req.IDToken, "")
+		if err != nil {
+			return nil, errors.New("invalid google token: " + err.Error())
+		}
+		emailStr, ok := payload.Claims["email"].(string)
+		if !ok {
+			return nil, errors.New("email not found in google token claims")
+		}
+		email = emailStr
+		name, _ = payload.Claims["name"].(string)
+		providerID = payload.Subject // Google ID
+	} else {
+		// 1b. Verify the unified Firebase ID Token (GitHub, Twitter)
+		if s.fbAuth == nil {
+			return nil, errors.New("firebase auth is not initialized on the server")
+		}
+
+		token, err := s.fbAuth.VerifyIDToken(ctx, req.IDToken)
+		if err != nil {
+			return nil, errors.New("invalid or expired firebase token: " + err.Error())
+		}
+
+		emailStr, ok := token.Claims["email"].(string)
+		if !ok || emailStr == "" {
+			return nil, errors.New("email not found in firebase token claims")
+		}
+		email = emailStr
+		
+		nameStr, _ := token.Claims["name"].(string)
+		if nameStr == "" {
+			nameStr = "Firebase User"
+		}
+		name = nameStr
+		providerID = token.UID // Firebase UID
 	}
 
-	token, err := s.fbAuth.VerifyIDToken(ctx, req.IDToken)
-	if err != nil {
-		return nil, errors.New("invalid or expired firebase token: " + err.Error())
+	// 2. Find user by Provider ID
+	var user *domain.User
+	var err error
+
+	if req.Provider == "google" {
+		user, err = s.userRepo.FindByGoogleID(ctx, providerID)
+	} else {
+		user, err = s.userRepo.FindByFirebaseUID(ctx, providerID)
 	}
 
-	// 2. Extract standard claims from Firebase token
-	firebaseUID := token.UID
-	email, ok := token.Claims["email"].(string)
-	if !ok || email == "" {
-		// Some providers (like Twitter/GitHub) might not provide an email if the user hides it.
-		// However, Firebase Auth usually handles this gracefully depending on console settings.
-		return nil, errors.New("email not found in firebase token claims")
-	}
-	
-	name, _ := token.Claims["name"].(string)
-	if name == "" {
-		name = "Firebase User"
-	}
-
-	// 3. Find user by Firebase UID
-	user, err := s.userRepo.FindByFirebaseUID(ctx, firebaseUID)
 	if err != nil {
 		return nil, err
 	}
@@ -127,19 +152,30 @@ func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequ
 		}
 
 		if userByEmail != nil {
-			// Account linking: User exists with this email, so just link the FirebaseUID
-			if err := s.userRepo.LinkFirebaseUID(ctx, userByEmail.ID, firebaseUID); err != nil {
-				return nil, err
+			// Account linking
+			if req.Provider == "google" {
+				if err := s.userRepo.LinkGoogleID(ctx, userByEmail.ID, providerID); err != nil {
+					return nil, err
+				}
+				userByEmail.GoogleID = &providerID
+			} else {
+				if err := s.userRepo.LinkFirebaseUID(ctx, userByEmail.ID, providerID); err != nil {
+					return nil, err
+				}
+				userByEmail.FirebaseUID = &providerID
 			}
 			user = userByEmail
-			user.FirebaseUID = &firebaseUID
 		} else {
 			// Create brand new user
 			newUser := &domain.User{
 				Name:         name,
 				Email:        email,
-				AuthProvider: req.Provider, // "google", "github", "twitter"
-				FirebaseUID:  &firebaseUID,
+				AuthProvider: req.Provider,
+			}
+			if req.Provider == "google" {
+				newUser.GoogleID = &providerID
+			} else {
+				newUser.FirebaseUID = &providerID
 			}
 			
 			createdUser, err := s.userRepo.Create(ctx, newUser)
@@ -150,7 +186,7 @@ func (s *authService) OAuthLogin(ctx context.Context, req *domain.OAuthLoginRequ
 		}
 	}
 
-	// 4. Issue Backend API Tokens
+	// 3. Issue Backend API Tokens
 	return s.issueTokens(ctx, user)
 }
 
