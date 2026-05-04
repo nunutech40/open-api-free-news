@@ -94,37 +94,45 @@ flowchart TD
 
 ---
 
-## 3. Unified Firebase Social Login — Internal Flow (Google, GitHub, Twitter)
+## 3. Hybrid OAuth Social Login Architecture (Google, GitHub, Twitter)
 
-Perbedaan mendasar: **Firebase yang memverifikasi identitas**, bukan BE secara manual.
-`idToken` yang dikirim dari Flutter adalah `Firebase ID Token`, yaitu JWT (JSON Web Token) yang ditandatangani oleh Firebase.
-BE memvalidasi token ini menggunakan Firebase Admin SDK — tidak ada password atau token raw dari masing-masing provider (Google/GitHub/X) yang dicek secara langsung oleh BE.
+Aplikasi ini sengaja menggunakan arsitektur **Hybrid** untuk Social Login guna mengatasi masalah dependensi dan memastikan keandalan di semua platform (Android & iOS).
 
-### 3.1. Sequence Diagram (Interaksi Komponen)
+### 3.1. Mengapa Hybrid?
+1. **Google Sign-In (Native):** Menggunakan package `google_sign_in` yang berkomunikasi langsung dengan Google Play Services (Android) dan Apple Authentication (iOS). Ini memberikan UX terbaik tanpa perlu membuka browser (Webview). Token yang didapat adalah **Raw Google ID Token**.
+2. **GitHub & Twitter (Firebase Auth):** Menggunakan package `firebase_auth` yang memunculkan Webview (Chrome Custom Tabs / Safari View Controller). Keduanya disatukan oleh Firebase, sehingga aplikasi tidak perlu repot menyimpan puluhan *client secret*. Token yang didapat adalah **Firebase ID Token**.
+
+### 3.2. Sequence Diagram (Interaksi Komponen)
 ```mermaid
 sequenceDiagram
     participant App as Aplikasi Flutter
-    participant FB as Firebase Auth SDK / Webview
+    participant Native as Google SDK (Native)
+    participant FB as Firebase Auth SDK (Webview)
     participant BE as Backend (Go)
     participant DB as Database
 
-    App->>FB: Login via Provider (Google/GitHub/X)
-    FB-->>App: Return `firebase_id_token`
-    
-    Note over App, BE: App TIDAK kirim token mentah provider.<br/>Hanya kirim token Firebase!
-    App->>BE: POST /auth/oauth {provider, idToken: firebase_id_token}
-    BE->>BE: fbAuth.VerifyIDToken() (Firebase Admin SDK)
+    alt Login via Google
+        App->>Native: Login via Google Sign-In
+        Native-->>App: Return `raw_google_id_token`
+        App->>BE: POST /auth/oauth {provider: "google", idToken: raw_google_id_token}
+        BE->>BE: idtoken.Validate() (Google API Client)
+    else Login via GitHub / Twitter
+        App->>FB: signInWithProvider (Webview)
+        FB-->>App: Return `firebase_id_token`
+        App->>BE: POST /auth/oauth {provider: "github/twitter", idToken: firebase_id_token}
+        BE->>BE: fbAuth.VerifyIDToken() (Firebase Admin SDK)
+    end
     
     alt Token Invalid / Expired
         BE-->>App: 401 Unauthorized
     else Token Valid
-        BE->>BE: Ekstrak Data {email, name, firebase_uid}
-        BE->>DB: Cari User (by firebase_uid atau email)
+        BE->>BE: Ekstrak Data {email, name, provider_id}
+        BE->>DB: Cari User (by google_id/firebase_uid atau email)
         
         alt User Belum Ada
-            BE->>DB: INSERT user baru (password=NULL, firebase_uid)
+            BE->>DB: INSERT user baru (password=NULL)
         else User Sudah Ada
-            BE->>DB: UPDATE firebase_uid (Account Linking)
+            BE->>DB: UPDATE provider_id (Account Linking)
         end
         
         BE->>BE: Generate accessToken & refreshToken (JWT Internal BE)
@@ -133,33 +141,42 @@ sequenceDiagram
     end
 ```
 
-### 3.2. Flowchart Logic (Logika Percabangan)
+### 3.3. Flowchart Logic (Validasi Backend)
 ```mermaid
 flowchart TD
-    Start(["POST /auth/oauth {provider, firebaseToken}"]) --> Verify["VerifyIDToken (Firebase Admin SDK)"]
-    Verify --> IsValid{"Token Valid?"}
+    Start(["POST /auth/oauth {provider, idToken}"]) --> CekProvider{"Provider == 'google' ?"}
     
-    %% Jika Invalid
-    IsValid -- "Tidak" --> Ret401(["Return 401 Unauthorized"])
+    %% Branch Google
+    CekProvider -- "Ya" --> ValGoogle["idtoken.Validate<br/>(Raw Google Token)"]
+    ValGoogle --> IsValidG{"Token Valid?"}
+    IsValidG -- "Tidak" --> Ret401(["Return 401 Unauthorized"])
+    IsValidG -- "Ya" --> GetGoogle["Dapat: email, name, google_id"]
+    GetGoogle --> FindG["Cari di DB: FindByGoogleID"]
     
-    %% Jika Valid
-    IsValid -- "Ya" --> GetData["Dapat: email, name, firebase_uid"]
-    GetData --> FindFB["Cari di DB: FindByFirebaseUID"]
-    FindFB --> FoundFB{"Ketemu?"}
+    %% Branch Firebase (GitHub/Twitter)
+    CekProvider -- "Tidak" --> ValFB["fbAuth.VerifyIDToken<br/>(Firebase Admin SDK)"]
+    ValFB --> IsValidF{"Token Valid?"}
+    IsValidF -- "Tidak" --> Ret401
+    IsValidF -- "Ya" --> GetFB["Dapat: email, name, firebase_uid"]
+    GetFB --> FindF["Cari di DB: FindByFirebaseUID"]
+    
+    %% Unified Flow
+    FindG --> Found{"Ketemu?"}
+    FindF --> Found
     
     %% Returning User
-    FoundFB -- "Ya (User Lama)" --> IssueTokens["issueTokens: Generate JWT Pair"]
+    Found -- "Ya (User Lama)" --> IssueTokens["issueTokens: Generate JWT Pair"]
     
     %% Fallback ke Email
-    FoundFB -- "Tidak" --> FindEmail["Cari di DB: FindByEmail"]
+    Found -- "Tidak" --> FindEmail["Cari di DB: FindByEmail"]
     FindEmail --> FoundEmail{"Ketemu?"}
     
     %% Account Linking
-    FoundEmail -- "Ya (Email Ada)" --> LinkAcc["UPDATE users SET firebase_uid = firebase_uid"]
+    FoundEmail -- "Ya (Email Ada)" --> LinkAcc["Link Account (UPDATE google_id / firebase_uid)"]
     LinkAcc --> IssueTokens
     
     %% Registrasi Baru
-    FoundEmail -- "Tidak (Baru)" --> CreateUser["INSERT users<br>(password=NULL, firebase_uid)"]
+    FoundEmail -- "Tidak (Baru)" --> CreateUser["INSERT users (password=NULL)"]
     CreateUser --> IssueTokens
     
     %% Sukses
@@ -172,9 +189,7 @@ flowchart TD
     class Ret401 error;
 ```
 
-> Setelah dapat `accessToken` internal dari BE, HP menyimpan dan menggunakannya
-> **persis sama** seperti login email/password. Client tidak perlu tahu
-> user login via metode apa — semuanya transparan.
+> **Catatan Penting:** Meskipun metodenya (Native vs Firebase) berbeda di *frontend* dan *backend*, hasil akhirnya tetap sama: Backend memberikan **Internal JWT Access Token**. Aplikasi Flutter tidak peduli user login lewat jalur apa, JWT yang diterima tetap diperlakukan sama untuk request ke endpoint lain.
 
 ---
 
