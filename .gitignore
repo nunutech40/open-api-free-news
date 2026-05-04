@@ -6,3 +6,4 @@ free-api-news-firebase.json
 *.test
 vendor/
 tmp/
+bin/
